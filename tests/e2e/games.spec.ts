@@ -109,8 +109,7 @@ test("plays offline after Download all (AC3.1, AC3.2)", async ({ page, context }
   await expect(page.getByText("Needs signal once").filter({ visible: true })).toHaveCount(0);
   const plays = page.getByRole("button", { name: /^Play / });
   await expect(plays).toHaveCount(6);
-  for (const play of await plays.all())
-    await expect(play).toBeEnabled();
+  for (const play of await plays.all()) await expect(play).toBeEnabled();
   await setup(page, "Memory");
   await page.getByRole("button", { name: "Start" }).click();
   await page.getByRole("button", { name: "Card 1, face down" }).click();
