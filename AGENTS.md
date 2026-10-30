@@ -28,6 +28,30 @@ sign-in names a public page instead (`export E2E_HOME := /a-public-page` in `pro
   writes it; don't hand-edit ids. The version lives here, and `make version` copies it into
   `package.json`.
 
+## The games
+
+The design is in `docs/spec.md` (the game interface, the engine and its messages, offline, the
+data) and the look in `DESIGN.md`.
+
+- `site/lib/`: the hub shell. `app.js` (the screens), `engine.js` and `net/local.js` (the runner
+  and its transport), `rng.js`, `deck.js`, `board.js` (for the rules), `cards.js` (SVG drawn by
+  code), `ui.js`, `input.js`, `layout.js`, `store.js`, `install.js`, `app.css`.
+- `site/games/<id>/rules.js` and `view.js`, and `site/games/index.json`.
+- `site/sw.js`: the service worker.
+
+**The import rule** (a unit test checks it): `rules.js` imports only `site/lib/{rng,deck,board}.js`
+and touches no page, network, clock or `Math.random`; only `store.js` touches `localStorage`.
+
+**Add a game** (a task `games: add <name>`): a folder `site/games/<id>/` with only `rules.js`
+(the interface in `docs/spec.md`) and `view.js`; a line in `site/games/index.json`, its `kb` the
+folder's size in KB rounded up; and the shared tests in `tests/unit/games.test.ts` (add it to
+`GAMES`): 200 CPU matches with legal moves to an end, the same match for the same seed, a hard CPU
+move under 100 ms, a refused move with a reason, and only what each seat may see.
+
+**Every release:** set `VERSION` in `site/sw.js` to `shipify.json`'s version (a unit test checks
+it), so players get the new release. A new file in `site/lib/` or `site/icons/` goes in its `SHELL`
+list (a test checks that too). After a change to a game, update its `kb` in `index.json`.
+
 ## Storage
 
 None. To keep data, add a stack option (KV for key-value, D1 for SQL, R2 for files, DO for live state and WebSockets) as a change: Shipify's

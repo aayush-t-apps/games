@@ -104,11 +104,34 @@ Static files only: the stack's Worker serves `/health`, and every other path is 
 `site/`, or `index.html` (the stack's single-page fallback).
 
 **The game interface** (every `site/games/<id>/rules.js`), pure and deterministic, with no DOM or
-network: metadata `{id, name, version, players: {min, max}, hidden}`, and `init(seats, seed)`,
-`view(state, seat)`, `legalMoves(state, seat)`, `apply(state, seat, move)` (throws on an illegal
-move), `winner(state)` (`null` or `{places}`), `ai(state, seat, level)`. Randomness is a seeded
-generator kept in the state. Each game's screen is `site/games/<id>/view.js`: it draws a view in
-SVG into the box and layout it gets, and maps the input layer's actions to moves.
+network: metadata `{id, name, version, players: {min, max}, hidden, realtime: false}`, and:
+
+- `init(seats, seed)`: the state for a number of seats. States are plain JSON. Each has `turn` (the
+  seat to move), `moves`, `rng` (the seeded generator, `site/lib/rng.js`) and `note` (the last
+  move in words, with `@n` for seat n's name: "@0 played Q♥").
+- `view(state, seat)`: what that seat may see. In a `hidden` game, only its own hand.
+- `legalMoves(state, seat)`: the moves that seat may make now; empty for every other seat. Moves
+  are small flat objects (`{t: "drop", col: 3}`).
+- `apply(state, seat, move)`: the next state; the given state is never changed. It throws an
+  `Error` whose message is the one-line reason (AC1.5).
+- `winner(state)`: `null`, or `{places}`: groups of seats, best first; tied seats share a group
+  (`[[1], [0, 2]]`). A draw is one group of every seat. Every game also ends after a fixed number
+  of moves, so no match runs for ever.
+- `ai(state, seat, level)`: the CPU's move for `easy`, `normal`, `hard`, and `best` (the hint). It
+  sees only what that seat may see, and gives the same move for the same position.
+
+Each game's screen is `site/games/<id>/view.js`: `render(box, ctx)` draws the view into the box
+(HTML buttons with SVG inside, each with `data-x`, `data-y` and `data-key` for the keyboard),
+`status(view, seat)` gives each player's chip text, and `hintText(move, view, names)` words a hint.
+`ctx` has the view, the legal moves, the seat shown, the names, kid mode, the hint, the layout,
+`play(move)` and `say(text)`.
+
+**Engine messages** (each with `v: 1`). To the engine: `{t: "move", seat, seq, move}`,
+`{t: "undo", seat}`, `{t: "hint", seat}`. From it: `{t: "view", seat, seq, turn, view, legal, note,
+last, places}` for every seat after every change, `{t: "refused", seat, reason}`,
+`{t: "hinted", seat, move}`, `{t: "end", places}` and `{t: "crash", reason}`. A move from the wrong
+seat, a CPU seat, or with an old `seq` is refused. Undo takes back the human's last move and the
+CPU moves after it.
 
 **Shared modules (`site/lib/`):**
 - `engine.js`: the host-authoritative runner. It holds the state, takes moves from seats, checks
@@ -133,7 +156,7 @@ only `store.js` touches `localStorage`.
 | Crazy Eights | cards | 2–6 | 52 cards; match suit or rank, an 8 names a suit; first out wins |
 | Go Fish | cards | 2–6 | Ask a seat for a rank; books of four; most books wins |
 | Memory | kids | 1–4 | Pairs face down; a match scores and plays again. CPU recall by level |
-| Ludo | board | 2–4 | A 6 leaves base, captures, safe squares, a 6 plays again |
+| Ludo | board | 2–4 | A 6 leaves base, captures, safe squares, a 6 plays again (a third 6 ends the turn), an exact roll to finish; the first with four tokens home wins |
 | Four in a Row | board | 2 | 7×6 grid. The owner's "Connect 4", named generically (no trade names) |
 | Quiz Race | kids | 1–4 | Answer a question (maths made from the seed, or a short JSON pack of kids' facts); right moves you a step on a 10-step track; first home wins. CPU right by level (60, 80, 95 %) |
 
@@ -142,16 +165,27 @@ so each release installs a new service worker. It precaches the hub shell into a
 that version, caches a game folder on its first open, re-fetches the games the old cache had, and
 deletes the old cache when it takes over (AC3.3). Every request is cache first, so a match never
 mixes versions and an opened app makes no requests. `sw.js` itself is `no-cache` in `_headers`.
+The first release takes over at once; a later one waits until the player taps **Reload with the
+update**. **Download all for offline** asks the service worker to save every game's two files, then
+checks each one in the cache before it says "All games ready offline" (AC3.2).
 
 ### Data
 
-Only in the browser, in `localStorage` key `games.v1`: `{player: {id, nick}, settings: {kid, theme,
-sound}, scores: {<game>: {<level>: {played, won}}}, recent: [last 20]}`, about 5 KB. Export and
-Import use the same shape with a `format: "games.v1"` field. Nothing on the server; a rollback is
-code only. A saved match in progress isn't kept: closing the tab ends it.
+Only in the browser, in `localStorage` key `games.v1`: `{player: {id, nick, named}, settings: {kid,
+theme, sound}, scores: {<game>: {<level>: {played, won}}}, recent: [last 20 {game, level, won,
+place, at}]}`, about 5 KB. `named` is false until the first-visit name is saved or skipped. The
+level is `easy`, `normal`, `hard`, or `friends` for a match with no CPU. Scores are seat 1's (the
+device's player); a win is first place alone. Export and Import use the same shape with a
+`format: "games.v1"` field; an import keeps only the known fields. Nothing on the server; a
+rollback is code only. A match in progress isn't kept: closing the tab ends it.
 
 `site/games/index.json` lists each game: `id, name, type, players, cpu, ages, teaching, version,
-kb`. A unit test checks that every folder has an entry and that `kb` matches the folder's size.
+kb, about`. A unit test checks that every folder has an entry, holds only `rules.js` and
+`view.js`, and that `kb` matches the folder's size (rounded up).
+
+**The CPU levels.** Four in a Row searches 1, 3 or 6 moves ahead (easy, normal, hard). Memory's CPU
+remembers each card it saw with a 35, 70 or 95 % chance. Quiz Race's CPU is right 60, 80 or 95
+times in 100. The card games and Ludo use simple rules that get smarter by level.
 
 ### Failure modes
 
