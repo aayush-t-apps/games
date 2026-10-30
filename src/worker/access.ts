@@ -27,7 +27,8 @@ export function resetKeys(): void {
   cache = null;
 }
 
-const isLocal = (url: string) => {
+/** A request to this machine (`make dev`, the tests); production URLs never are. */
+export const isLocal = (url: string) => {
   const host = new URL(url).hostname;
   return host === "localhost" || host === "127.0.0.1" || host === "[::1]";
 };

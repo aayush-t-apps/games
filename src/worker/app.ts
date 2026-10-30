@@ -4,7 +4,7 @@
 // admin page's data (change 0003): rooms (one Room object per code) and the Hub (one object).
 import type { Context, Next } from "hono";
 import { createApp, type PlatformEnv, type PlatformVars } from "../shared/platform";
-import { type AccessEnv, accessReady, type Caller, checkAccess, isAdmin } from "./access";
+import { type AccessEnv, accessReady, type Caller, checkAccess, isAdmin, isLocal } from "./access";
 import {
   CODE_RE,
   catalogUpdate,
@@ -73,7 +73,8 @@ export const app = createApp<Env>((a) => {
 
   // The catalogue switches, cached 60 s at the edge: a change in /admin is live within a minute.
   a.get("/api/catalog", async (c) => {
-    const cache = typeof caches === "undefined" ? null : caches.default;
+    // Locally there's no edge: an admin change shows at once on `make dev`.
+    const cache = typeof caches === "undefined" || isLocal(c.req.url) ? null : caches.default;
     const key = new Request(new URL("/api/catalog", c.req.url));
     const hit = await cache?.match(key);
     if (hit) return new Response(hit.body, hit);

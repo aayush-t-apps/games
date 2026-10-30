@@ -80,7 +80,7 @@ export function showHub() {
   show(
     store.firstVisit ? welcome() : null,
     el("h1", { class: "hub-title" }, `Pick a game, ${data.player.nick}`),
-    onlineSection(),
+    el("div", { id: "online-slot" }, onlineSection()),
     el("ul", { class: "shelf" }, games.map(gameBox)),
     el(
       "section",
@@ -165,7 +165,7 @@ function gameBox(g) {
             {
               type: "button",
               class: "online-play",
-              "aria-label": `Play ${g.name} online`,
+              "aria-label": `Play online: ${g.name}`,
               onclick: () => online().then((o) => o.startRoom(g)),
             },
             "Play online",
@@ -960,7 +960,12 @@ async function checkOnline() {
       net.member = false;
     }
   }
-  if (screen === "hub" && JSON.stringify([games.map((g) => g.id), net]) !== before) showHub();
+  // Only the online row and the shelf change, in place: a name being typed stays.
+  if (screen === "hub" && JSON.stringify([games.map((g) => g.id), net]) !== before) {
+    document.getElementById("online-slot")?.replaceChildren(...[onlineSection()].filter(Boolean));
+    main.querySelector(".shelf")?.replaceChildren(...games.map(gameBox));
+    markCached();
+  }
 }
 
 /** The games on, featured first, then in the admin's order, then as index.json lists them. */
