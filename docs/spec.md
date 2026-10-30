@@ -1,23 +1,25 @@
 <!-- Living spec: what this app is NOW. Every change doc's implementation updates it.
      History: docs/changes/. Releases: CHANGELOG.md. -->
 
-# Games: classic games on any device, offline
+# Games: classic games on any device, offline and online
 
 ## Goal
 
 A game room for family, kids and friends at `games.app.a69x.in`. Anyone opens it in a browser on a
 phone, tablet, laptop or TV, or installs it as an app, and plays six classic games solo against the
-CPU or pass-and-play on one device, offline. Kid mode teaches. Scores stay in that browser. This is
-task 1 of the [games plan v5][p] (task #613): no server state, no sign-in. Online rooms come later
-in their own task (#616), through the transport seam below, with no change to the games.
+CPU or pass-and-play on one device, offline. Kid mode teaches. Scores stay in that browser. Members
+(signed in with Cloudflare Access) start online rooms; anyone joins one by link, code or QR code
+with a nickname, from any device, and the online scores are shared. The owner runs it from
+`/admin`. This is the [games plan v5][p] (task #613), tasks 1 and 3.
 
 [p]: https://github.com/aayush-t-apps/shipify/blob/shipify-files/task-613/2026-10-30T14-57-03-920Z/games-plan.md
 
 ## Out of scope
 
-Online rooms, members, the admin page, the Hub and its scoreboard (task #616). Accounts, chat,
-real-time games, gamepads, a big-screen table view, sync between devices (Export and Import move
-data instead), commercial game names or art, third-party art, a WebAssembly engine.
+Accounts of our own (members are an Access list), chat, real-time games and the P2P transport,
+gamepads, sync of a device's own scores (Export and Import move data instead), commercial game
+names or art, third-party art, a WebAssembly engine, a neutral server referee (the host device runs
+the rules), counting solo play on the server.
 
 ## Stories
 
@@ -64,6 +66,59 @@ data instead), commercial game names or art, third-party art, a WebAssembly engi
     WHEN I import that file on another device THE APP SHALL load it, and refuse a file that isn't
     one, with the reason, changing nothing.
   - AC4.4 WHEN the app starts THE APP SHALL ask for persistent storage (`navigator.storage.persist`).
+- **US5 (P1): Start an online room (members)**. As a member, I want to start a room and share it,
+  so that people on other devices play with me.
+  - AC5.1 WHEN I am not signed in THE APP SHALL show **Sign in to play online** on the hub; WHEN
+    I sign in at `/member` (Access, an email code) THE APP SHALL bring me back to the hub with
+    **Play online** on each game that is on. A guest never sees a login.
+  - AC5.2 WHEN I start a room (2–8 seats in the game's range, CPU seats and level) THE APP SHALL
+    give a 6-letter code (31 letters, no look-alikes), the link `/r/<code>`, its QR code, and
+    **Copy link** (or **Share**).
+  - AC5.3 WHEN I am the room owner THE APP SHALL let me start, kick, lock, unlock, set CPU seats,
+    rematch and close, and refuse these controls from any other device.
+  - AC5.4 WHEN a `/api/member/*` call has no valid Access token (signature, audience, issuer or
+    expiry) THE APP SHALL refuse it with 401 and change nothing.
+- **US6 (P1): Join and play as a guest**. As anyone with a link or code, I want to join with only
+  a nickname, so that I play online without an account.
+  - AC6.1 WHEN I open `/r/<code>`, scan its QR code or type the code THE APP SHALL show the game
+    and seats, ask once for a nickname (1–16 characters), load the game if needed, and give me
+    the next free seat, or a spectator place when the room is full, locked or started.
+  - AC6.2 WHEN the owner starts THE APP SHALL run the match on the host device (the owner's by
+    default) and send each device only its own seat's view; spectators get the public view.
+  - AC6.3 WHEN I move out of turn, with an old `seq` or for another seat THE APP SHALL refuse it
+    and say why (as AC1.5).
+  - AC6.4 WHEN my device drops (network, sleep, a deploy) THE APP SHALL reconnect by itself (1, 2,
+    4 … 15 s) and give back my seat and the latest view.
+  - AC6.5 WHEN the host drops, or a player taps **Make me host**, THE APP SHALL make that next
+    device the host, going on from the room's last snapshot.
+  - AC6.6 WHEN a player is offline for 60 s on their turn THE APP SHALL let the host's CPU play
+    for them until they are back.
+  - AC6.7 WHEN the code is unknown or the room has ended THE APP SHALL say "This room has ended"
+    and offer the hub; WHEN the device's game or protocol version differs it SHALL ask to reload.
+- **US7 (P1): Shared scores**. As a player, I want online results kept for every device, so that
+  we know who is winning.
+  - AC7.1 WHEN an online match ends THE APP SHALL show the places on every device and record the
+    match once in the Hub (game, nicknames, places, length, seats, CPU seats).
+  - AC7.2 WHEN I open **Scores** THE APP SHALL show, per game, the top players by wins and the last
+    20 online matches.
+- **US8 (P2): Run the hub (admin)**. As the owner, I want one page to see use and manage the
+  games, so that I keep what is played and turn off the rest.
+  - AC8.1 WHEN I open `/admin` THE APP SHALL show four tabs, from one `GET /api/admin/stats` per
+    open or **Refresh**: **Overview** (live rooms and by which member, matches today; per game:
+    type, players, CPU, size, on or off, matches in 7 and 30 days, average length and players,
+    last played; matches per type in 30 days; hints "not played in 60 days" and "most played";
+    the app's size), **Games**, **Rooms** and **Scores**.
+  - AC8.2 WHEN I turn a game off THE APP SHALL take it off the hub within about a minute, refuse
+    new rooms for it, keep its scores, and delete its cached files on each device next time it is
+    online. I can also mark a game **featured** and move it up or down.
+  - AC8.3 WHEN I close a room on **Rooms** THE APP SHALL end it on every device.
+  - AC8.4 WHEN I tap **Export** THE APP SHALL download all Hub data as one JSON file.
+  - AC8.5 WHEN a signed-in member who isn't `ADMIN_EMAIL` calls `/api/admin/*` THE APP SHALL
+    refuse it with 403.
+- **US9 (P3): A big screen as the table**. As a family at a TV, I want a big screen to show the
+  board while phones hold the hands, so that everyone watches one table.
+  - AC9.1 WHEN I join a room as **Table** THE APP SHALL take no seat and show the public view large
+    to the end of the match.
 
 ## UI
 
@@ -77,9 +132,23 @@ Design brief (`DESIGN.md`), in short:
 - **Screens (one primary action each):** Hub (the game list; **Play**), Setup (seats, CPU level,
   kid mode; **Start**), Match (the board; play a move), Result (places; **Play again**), Settings
   (nickname, kid mode, theme, sound, Export and Import, Install).
+- **Online screens** (`site/lib/online.js`): the hub's online row (**Sign in to play online**,
+  **Join a room**, **Online scores**; **Play online** on each game for a member), Start a room
+  (seats, CPU seats, level; **Start the room**), Join (nickname; **Join**, or **Join as Table**),
+  Lobby (`/r/<code>`: the code, its QR code, the link, **Share** or **Copy link**, the seats; the
+  owner's **Start**, **Lock**, **Make it a CPU**, **Kick**, **Add a seat**, **Close the room**),
+  Match (as above, with a bar: the room, its host, **Make me host**, "Reconnecting…"; no Hint or
+  Undo online), Result (places; **Rematch** for the owner, **Scores**, **Back to the room**),
+  Online scores (per game: top players, last 20 matches).
+- **Admin** (`/admin`, `site/admin/`): tabs **Overview**, **Games** (on, featured, **Up** and
+  **Down**, **Save**, **Add a game**), **Rooms** (**Close**), **Scores** (**Export**), and a
+  **Members** link to the Access policy.
 - **States:** first visit (nickname, optional; "Player" by default), loading a game ("Getting
-  Ludo…"), offline (a small "Offline" mark; games not yet cached say "Needs signal once"), "Update
-  ready", an old browser ("Please update your browser to play").
+  Ludo…"), offline (a small "Offline" mark; games not yet cached say "Needs signal once"; the online
+  row hides), "Update ready", an old browser ("Please update your browser to play"). Online: "This
+  room has ended", "This room uses a newer version of the game. Reload", "Reconnecting…", "The
+  owner took your seat", "This seat opened on another tab or device", "This room is full". Admin:
+  "This page is for the owner", "Sign-in isn't set up yet".
 - **Layouts:** compact (narrow portrait: board on top, own hand as a fan at the bottom, menus as
   bottom sheets), wide (landscape and tablets: players around the board), desk (adds a side panel
   with the moves log and scores). CSS grid, `clamp()`, container queries and safe-area insets.
@@ -98,10 +167,16 @@ flowchart LR
   Hub --> Engine["engine.js + local transport"]
   Engine --> Game
   Hub --> LS[("localStorage: nickname, settings, scores")]
+  Hub -- "/api/*, WebSocket" --> API["Worker: routes, checks"]
+  Access["Cloudflare Access: /member, /admin, /api/member/*, /api/admin/*"] -.-> API
+  API -- "RPC" --> HubDO[("Hub DO: catalog, rooms, matches")]
+  API -- "WebSocket, RPC" --> Room[("Room DO per code: meta, snap")]
+  Room -- "match end, room end" --> HubDO
 ```
 
-Static files only: the stack's Worker serves `/health`, and every other path is a file from
-`site/`, or `index.html` (the stack's single-page fallback).
+Every path but `/health`, `/.well-known/shipify.json` and `/api/*` is a file from `site/`, or
+`index.html` (the stack's single-page fallback, so `/r/<code>` opens the app). The Worker
+(`src/worker/app.ts`) answers `/api/*` for online play and the admin page.
 
 **The game interface** (every `site/games/<id>/rules.js`), pure and deterministic, with no DOM or
 network: metadata `{id, name, version, players: {min, max}, hidden, realtime: false}`, and:
@@ -110,6 +185,7 @@ network: metadata `{id, name, version, players: {min, max}, hidden, realtime: fa
   seat to move), `moves`, `rng` (the seeded generator, `site/lib/rng.js`) and `note` (the last
   move in words, with `@n` for seat n's name: "@0 played Q♥").
 - `view(state, seat)`: what that seat may see. In a `hidden` game, only its own hand.
+  `view(state, null)` is the public view, with no hand, for spectators and a table.
 - `legalMoves(state, seat)`: the moves that seat may make now; empty for every other seat. Moves
   are small flat objects (`{t: "drop", col: 3}`).
 - `apply(state, seat, move)`: the next state; the given state is never changed. It throws an
@@ -128,17 +204,25 @@ Each game's screen is `site/games/<id>/view.js`: `render(box, ctx)` draws the vi
 
 **Engine messages** (each with `v: 1`). To the engine: `{t: "move", seat, seq, move}`,
 `{t: "undo", seat}`, `{t: "hint", seat}`. From it: `{t: "view", seat, seq, turn, view, legal, note,
-last, places}` for every seat after every change, `{t: "refused", seat, reason}`,
-`{t: "hinted", seat, move}`, `{t: "end", places}` and `{t: "crash", reason}`. A move from the wrong
-seat, a CPU seat, or with an old `seq` is refused. Undo takes back the human's last move and the
-CPU moves after it.
+last, places}` for every seat after every change, then `{t: "public", …}` the same with the public
+view and no legal moves, `{t: "refused", seat, reason}`, `{t: "hinted", seat, move}`,
+`{t: "end", places}` and `{t: "crash", reason}`. A move from the wrong seat, a CPU seat, or with an
+old `seq` is refused. Undo takes back the human's last move and the CPU moves after it. For online
+play the engine also has `snapshot()` (`{state, seq, last, places}`), `from` (go on from a
+snapshot on another device), `resend()` (every view again, same `seq`) and `setAway(seats)`: a
+human seat that is away on its turn for 60 s (`IDLE_MS`) is played by the CPU at its level until a
+move or the room says it's back (AC6.6).
 
 **Shared modules (`site/lib/`):**
 - `engine.js`: the host-authoritative runner. It holds the state, takes moves from seats, checks
   them, applies them, sends each seat its view, runs CPU seats, keeps `turn` and `seq`, and keeps
   the history for Undo. It talks to seats only through a transport.
-- `net/local.js`: the `local` transport, `send(msg)`, `onMessage(cb)`, `peers()`, in one page. Task
-  #616 adds `net/room.js` with the same interface; the engine and the games don't change.
+- `net/local.js`: the `local` transport, `send(msg)`, `onMessage(cb)`, `peers()`, in one page.
+  `net/room.js`: the `room` transport, the same interface over a WebSocket to the room, with
+  hello, reconnect (1, 2, 4, 8, then every 15 s), a ping every 30 s, `{t: "link", up}` events, and
+  this tab's seat and owner tokens in `sessionStorage`. The engine and the games don't change.
+- `online.js` (loaded only for online play): the online screens, and the host glue below. `qr.js`:
+  QR codes as SVG (byte mode, level M, versions 1–10), drawn by code.
 - `rng.js` (seeded), `deck.js` (shuffle, deal, hands, draw and discard piles), `board.js` (grids
   and tracks), `cards.js` (SVG cards and pieces, drawn by code).
 - `ui.js` (hint, undo, kid mode, pass screen, live region, sound as short Web Audio tones,
@@ -167,7 +251,61 @@ deletes the old cache when it takes over (AC3.3). Every request is cache first, 
 mixes versions and an opened app makes no requests. `sw.js` itself is `no-cache` in `_headers`.
 The first release takes over at once; a later one waits until the player taps **Reload with the
 update**. **Download all for offline** asks the service worker to save every game's two files, then
-checks each one in the cache before it says "All games ready offline" (AC3.2).
+checks each one in the cache before it says "All games ready offline" (AC3.2). The service worker
+leaves `/api/*`, `/member` and `/admin` to the network, except `/api/catalog`: network first, the
+last one kept for offline, and a game the catalogue turns off loses its saved files (AC8.2).
+
+### Online play (changes 0002, 0003)
+
+**Who.** Guests (anyone) play solo, join rooms and read the scores. Members start rooms: Cloudflare
+Access (one app on `/member`, `/admin`, `/api/member/*`, `/api/admin/*`; one policy of emails;
+ADR 0001) signs them in, and the Worker checks the `Cf-Access-Jwt-Assertion` token again itself
+(`access.ts`: RS256 with the team's keys from `https://<ACCESS_TEAM>/cdn-cgi/access/certs`, cached
+an hour, fetched again for a new key at most once a minute; `aud` is `ACCESS_AUD`, `iss`, `exp`,
+`nbf`). The admin is the member whose email is `ADMIN_EMAIL` (a runtime secret; none set: nobody).
+With no `ACCESS_TEAM` or `ACCESS_AUD`, member and admin calls get 503 and the hub hides online
+play; only on `localhost` is the caller `dev@localhost`, member and admin (`make dev`, tests).
+
+**Routes** (`src/worker/app.ts`, input checks in `checks.ts`): `GET /api/catalog` (the switches
+and whether online play is set up; 60 s at the edge), `GET /api/scores?game=`, `GET
+/api/rooms/:code` (404 "This room has ended"), `GET /api/rooms/:code/ws` (the room's WebSocket),
+`GET /api/member/me`, `POST /api/member/rooms` (`{game, version, seats, cpu, level}` →
+`{code, ownerToken}`), `GET /api/admin/stats`, `GET` and `PUT /api/admin/catalog`, `GET
+/api/admin/rooms`, `DELETE /api/admin/rooms/:code`, `GET /api/admin/export`. Bodies are JSON up to
+2 KB; a write and the WebSocket need `Origin` equal to the app's own. Codes are 6 characters from
+`ABCDEFGHJKMNPQRSTUVWXYZ23456789`.
+
+**Room DO** (`src/worker/objects/room.ts`, its rules in `room-logic.ts`), one per code:
+storage `meta` (game and version, the member, the owner token's hash, seats `{nick, cpu, token
+hash}`, host seat, locked, started, ended, match count, expiry) and `snap` (the host's last
+`state`: one write per move). Sockets hibernate; each keeps `{seat, table}` (seat `null`: a
+spectator); `ping` gets `pong` without waking the room. It checks only the envelope: protocol
+`v: 1`, the type for the sender, 4 KB a message (32 KB for `state`), 20 a second; and caps of 8
+seats, 8 spectators, 24 sockets. One alarm ends the room 6 hours after it starts, or 10 minutes
+after its last device leaves: it says `closed`, unlists itself from the Hub and deletes its storage.
+
+**Messages** (JSON, `v: 1`). Device → room: `hello {nick, seatToken?, ownerToken?, table?}`,
+`move {seq, move}`, `take-host`, `owner {op: start | rematch | lock | unlock | kick | cpu | size |
+close}`. Host → room: `state {seq, turn, views, public, snapshot}`, `refused {seat, reason}`,
+`end {places}`, `crash`. Room → device: `welcome {seat, seatToken?, owner, room}`, `seats {room}`,
+`start {match, seed, seats}` and `host {match, snapshot}` (to the host), `move {seat, seq, move}`
+(to the host), `view {data}` (a seat's own), `public {data}` (spectators), `refused {reason}`, `end
+{places}`, `crash`, `closed {reason}`, `error {code, text}` (`kicked`, `replaced`, `full`,
+`version`, `nick`, `rate`, `big`, `role`…). The room stamps the sender's seat on each move and
+refuses one out of turn or with an old `seq` itself (it reads `seq` and `turn` from `state`).
+
+**The host** is the owner's device by default. Its engine runs on a local bus; online.js sends each
+round's views, the public view and `snapshot()` to the room as one `state`, gives the host's own
+seat its view directly, and passes the room's moves to the engine. When the host's socket closes,
+the room makes the next online player the host and sends it the snapshot; **Make me host** does the
+same. A device back after a drop says hello with its token and gets its seat and latest view.
+
+**Hub DO** (`src/worker/objects/hub.ts`, SQL in `hub-sql.ts`), one, `getByName("hub")`: tables
+`catalog (game, enabled, featured, sort)` (a game with no row is on), `rooms (code, game, member,
+started, expires)` and `matches (id, game, at, players, places, secs, seats, cpu, winner)`
+(`winner`: the sole human winner's nickname, for the top players). Called when a room starts or
+ends, a list loads, or the admin acts; never per move. `stats()` is two queries over `matches`,
+the live rooms and the switches; the admin page adds each game's details from `index.json`.
 
 ### Data
 
@@ -176,8 +314,13 @@ theme, sound}, scores: {<game>: {<level>: {played, won}}}, recent: [last 20 {gam
 place, at}]}`, about 5 KB. `named` is false until the first-visit name is saved or skipped. The
 level is `easy`, `normal`, `hard`, or `friends` for a match with no CPU. Scores are seat 1's (the
 device's player); a win is first place alone. Export and Import use the same shape with a
-`format: "games.v1"` field; an import keeps only the known fields. Nothing on the server; a
-rollback is code only. A match in progress isn't kept: closing the tab ends it.
+`format: "games.v1"` field; an import keeps only the known fields. A local match in progress isn't
+kept: closing the tab ends it. Online matches aren't in these scores: the Hub keeps them.
+
+On the server, only for online play: the Hub's tables and each live room's `meta` and `snap`
+(above). Nicknames are what players type; no emails but the members' in `rooms` (shown only to the
+admin). **Export** on `/admin` downloads it all (`format: "games-hub.v1"`). Durable Object classes
+only add; Cloudflare refuses a rollback across them, so a bad release is fixed forward.
 
 `site/games/index.json` lists each game: `id, name, type, players, cpu, ages, teaching, version,
 kb, about`. A unit test checks that every folder has an entry, holds only `rules.js` and
@@ -195,11 +338,19 @@ times in 100. The card games and Ludo use simple rules that get smarter by level
 - `localStorage` is full or blocked (private mode): play works, and Settings says scores can't be
   kept. iPhone Safari may clear a non-installed site's data after 7 days unused: the iOS card says
   to install, or to Export.
+- Online: a deploy closes every socket; devices reconnect and the host goes on from `snap`. A free
+  limit hit: the calls fail until 00:00 UTC and the screens say online play needs signal or is
+  busy. The Hub failing to record a match doesn't stop the result on the devices.
 
 ### Limits
 
 - The first load is the hub shell and `site/lib/`, inside the 80 KB JS budget; each game loads with
-  `import()`, a few tens of KB. Static file requests are free; the Worker sees only `/health`.
+  `import()`, a few tens of KB, and `online.js` only for online play. Static file requests are free;
+  the Worker sees `/health` and `/api/*`.
+- Online, on Cloudflare's free plan: 100,000 Worker requests and 100,000 Durable Object requests a
+  day (a WebSocket message is 1/20 of one), 13,000 GB-s of awake room time, 100,000 row writes. Over
+  a limit, calls fail until 00:00 UTC; nothing is billed. Access is free for up to 50 members.
+- No PR previews: Cloudflare makes none for a Worker with Durable Objects. Review with `make dev`.
 - Browsers from about the last 3 years (ES modules, service worker, container queries, Pointer
   Events). Older ones get the "please update" page.
 
@@ -208,5 +359,7 @@ times in 100. The card games and Ludo use simple rules that get smarter by level
 - `docs/spec.md`: the game interface, the engine and transport seam, the import rule, offline and
   the data shape. `AGENTS.md`: how to add a game (`games: add <name>`: a folder, an `index.json`
   line, the shared tests pass) and to keep `sw.js`'s version in step.
-- `README.md`: what it is, how to install on each platform, Export and Import.
+- `README.md`: what it is, how to install on each platform, Export and Import, online play and its
+  one-time setup (ADR 0001), adding a member, `/admin`.
+- `AGENTS.md`: the two Durable Objects (classes only add), never log the Access token or email.
 - The preset's starter page and its e2e test are replaced.

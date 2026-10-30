@@ -130,18 +130,18 @@ flowchart LR
 
 ## Tasks
 
-- [ ] T1 [US5] Config (`ship upgrade`), Access and input checks — files: `shipify.json`,
+- [x] T1 [US5] Config (`ship upgrade`), Access and input checks — files: `shipify.json`,
   `wrangler.jsonc`, `src/worker/access.ts`, `src/worker/checks.ts` — verifies: AC5.4
-- [ ] T2 [US6] Room DO — files: `src/worker/objects/room.ts`, `src/worker/room-logic.ts` —
+- [x] T2 [US6] Room DO — files: `src/worker/objects/room.ts`, `src/worker/room-logic.ts` —
   verifies: AC5.3, AC6.1, AC6.3, AC6.5, AC6.7
-- [ ] T3 [US7] Hub DO and routes — files: `src/worker/objects/hub.ts`, `src/worker/hub-sql.ts`,
+- [x] T3 [US7] Hub DO and routes — files: `src/worker/objects/hub.ts`, `src/worker/hub-sql.ts`,
   `src/worker/app.ts` — verifies: AC7.1, AC7.2
-- [ ] T4 [US6] Engine and `view(state, null)` — files: `site/lib/engine.js`,
+- [x] T4 [US6] Engine and `view(state, null)` — files: `site/lib/engine.js`,
   `site/games/*/rules.js` — verifies: AC6.2, AC6.5, AC6.6
-- [ ] T5 [US5, US6, US7, US9] Room transport, online screens, QR, reconnect, Table, Scores,
+- [x] T5 [US5, US6, US7, US9] Room transport, online screens, QR, reconnect, Table, Scores,
   service worker, `/member` — files: `site/lib/`, `site/sw.js`, `site/member/` — verifies: AC5.1,
   AC5.2, AC6.4, AC7.2, AC9.1
-- [ ] T6 [all] Tests (`localWorker()`; e2e: a desktop and a phone play Four in a Row online, the
+- [x] T6 [all] Tests (`localWorker()`; e2e: a desktop and a phone play Four in a Row online, the
   places and Scores show), docs, 0.2.0 — files: `tests/`, `docs/` — verifies: AC6.2, AC7.1
 
 ## Verification
