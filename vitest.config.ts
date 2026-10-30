@@ -12,13 +12,15 @@ export default defineConfig({
     maxWorkers: Math.max(2, Math.floor(availableParallelism() / 2)),
     coverage: {
       provider: "v8",
-      exclude: ["src/worker/index.ts", "src/shared/health.ts"],
+      // Durable Objects run in workerd (tests/unit/support/worker.ts), where Node can't count them:
+      // logic that needs branch tests goes in plain modules beside them.
+      exclude: ["src/worker/index.ts", "src/shared/health.ts", "src/worker/objects/**"],
       include: [
         "src/worker/**/*.ts",
         "src/shared/**/*.ts",
         "src/web/lib/**/*.ts",
         // The game logic: pure modules with no DOM. The screens are covered by tests/e2e.
-        "site/lib/{rng,deck,board,engine,store}.js",
+        "site/lib/{rng,deck,board,engine,store,qr}.js",
         "site/lib/net/*.js",
         "site/games/*/rules.js",
       ],

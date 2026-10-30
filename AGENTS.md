@@ -1,6 +1,6 @@
 # Games: agent guide
 
-A public hub of six classic card, board and kids' games that anyone plays in a browser or as an installed app, solo against the CPU or pass-and-play, offline, with scores kept on the device.
+A public hub of six classic card, board and kids' games that anyone plays in a browser or as an installed app, solo against the CPU or pass-and-play, offline, or in online rooms that members start and anyone joins by link or code, with shared scores.
 
 A Shipify **app** (stack `ts-static` 1.2.0, on Cloudflare Workers). It installs, runs,
 tests and deploys on its own through `make`.
@@ -35,8 +35,14 @@ data) and the look in `DESIGN.md`.
 
 - `site/lib/`: the hub shell. `app.js` (the screens), `engine.js` and `net/local.js` (the runner
   and its transport), `rng.js`, `deck.js`, `board.js` (for the rules), `cards.js` (SVG drawn by
-  code), `ui.js`, `input.js`, `layout.js`, `store.js`, `install.js`, `app.css`.
+  code), `ui.js`, `input.js`, `layout.js`, `store.js`, `install.js`, `app.css`. Online play:
+  `online.js` (loaded only for it), `net/room.js` (the `room` transport), `qr.js`.
 - `site/games/<id>/rules.js` and `view.js`, and `site/games/index.json`.
+- `site/member/` (Access returns members here) and `site/admin/` (the owner's page).
+- `src/worker/`: `app.ts` (the `/api/*` routes), `access.ts` (the Access token check),
+  `checks.ts` (input), `room-logic.ts` and `hub-sql.ts` (the objects' rules, unit tested in Node),
+  `objects/` (the `Room` and `Hub` Durable Objects; tested through `localWorker()` in
+  `tests/unit/objects.test.ts`, outside the coverage count).
 - `site/sw.js`: the service worker.
 
 **The import rule** (a unit test checks it): `rules.js` imports only `site/lib/{rng,deck,board}.js`
@@ -54,18 +60,27 @@ list (a test checks that too). After a change to a game, update its `kb` in `ind
 
 ## Storage
 
-None. To keep data, add a stack option (KV for key-value, D1 for SQL, R2 for files, DO for live state and WebSockets) as a change: Shipify's
-`stacks/_cloudflare/storage.md` says how.
+Option `do` (Shipify's `stacks/_cloudflare/storage.md`): two Durable Object classes, `Room` (one
+per room code: `meta` and `snap`) and `Hub` (one: SQLite tables `catalog`, `rooms`, `matches`),
+bindings `ROOM` and `HUB`, in `wrangler.jsonc`'s `exports`. **Classes only add:** never rename or
+delete one, and add a Hub column or table only in a way the old code still reads (`CREATE ... IF
+NOT EXISTS`, a column that may be empty). Cloudflare refuses a rollback across a class change:
+roll forward. No PR previews. Sign-in is Cloudflare Access (docs/adr/0001-members-sign-in-with-access.md):
+`ACCESS_TEAM` and `ACCESS_AUD` are plain `vars`, `ADMIN_EMAIL` a runtime secret.
 
 ## Rules
 
 1. Every behaviour change comes with a test. Put logic where it can be unit tested.
 2. Never commit secrets or `.dev.vars`. Never log headers, cookies, tokens or request bodies (use
-   `src/shared/logger.ts`).
+   `src/shared/logger.ts`). Never log the Access token (`Cf-Access-Jwt-Assertion`), a member's
+   email, a seat or owner token, or a room's messages.
 3. Never force-push, push to `production`, or edit `.github/workflows/`: the pipeline is this
    app's own, its stack's (it runs this app's `make` targets), and changes only by `ship upgrade`.
 4. Pin new dependencies to exact versions at least 2 days old.
-5. Keep `/health` backward compatible. CI checks its `commit` after each deploy.
+5. Keep `/health` backward compatible. CI checks its `commit` after each deploy. It stays outside
+   the Access app, with `/.well-known/shipify.json`.
+6. Online, the room never reads a game's moves, views or snapshot: a new game needs no server
+   change. Change the room's messages only with `PROTOCOL` (`engine.js`, `room-logic.ts`) in step.
 
 ## History and how to change this app
 

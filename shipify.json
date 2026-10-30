@@ -2,9 +2,9 @@
   "shipify": 1,
   "id": "games",
   "name": "Games",
-  "description": "A public hub of six classic card, board and kids' games that anyone plays in a browser or as an installed app, solo against the CPU or pass-and-play, offline, with scores kept on the device.",
+  "description": "A public hub of six classic card, board and kids' games that anyone plays in a browser or as an installed app, solo against the CPU or pass-and-play, offline, or in online rooms that members start and anyone joins by link or code, with shared scores.",
   "kind": "app",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "stack": {
     "id": "ts-static",
     "version": "1.2.0"
@@ -27,11 +27,16 @@
     "deploy": [
       "CLOUDFLARE_API_TOKEN"
     ],
-    "runtime": []
+    "runtime": [
+      "ADMIN_EMAIL"
+    ]
   },
   "vars": [
     "CLOUDFLARE_ACCOUNT_ID",
     "CF_WORKERS_SUBDOMAIN"
+  ],
+  "options": [
+    "do"
   ],
   "platformVersion": "0.1.17",
   "createdAt": "2026-10-30T18:21:05.989Z"

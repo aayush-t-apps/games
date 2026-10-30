@@ -3,7 +3,7 @@ change: 3
 app: games
 title: "Admin page: overview, games, rooms and scores"
 bump: minor
-released: null
+released: v0.2.0
 task: aayush-t-apps/shipify#616
 ---
 
@@ -84,10 +84,10 @@ and no polling. Sign-in is the same Access app (docs/adr/0001-members-sign-in-wi
 
 ## Tasks
 
-- [ ] T1 [US8] Admin routes and Hub methods, with the admin check — files: `src/worker/app.ts`,
+- [x] T1 [US8] Admin routes and Hub methods, with the admin check — files: `src/worker/app.ts`,
   `src/worker/objects/hub.ts`, `src/worker/hub-sql.ts` — verifies: AC8.1, AC8.3, AC8.4, AC8.5
-- [ ] T2 [US8] The admin page — files: `site/admin/` — verifies: AC8.1, AC8.2, AC8.3, AC8.4
-- [ ] T3 [US8] The hub follows the catalogue; the service worker drops a game turned off; e2e: a
+- [x] T2 [US8] The admin page — files: `site/admin/` — verifies: AC8.1, AC8.2, AC8.3, AC8.4
+- [x] T3 [US8] The hub follows the catalogue; the service worker drops a game turned off; e2e: a
   game turned off through the admin API leaves the hub — files: `site/lib/app.js`, `site/sw.js`,
   `tests/` — verifies: AC8.2
 

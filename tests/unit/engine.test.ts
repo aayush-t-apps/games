@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { check, copy } from "../../site/lib/board.js";
-import { CRASH, createEngine, PROTOCOL } from "../../site/lib/engine.js";
+import { CRASH, createEngine, IDLE_MS, PROTOCOL } from "../../site/lib/engine.js";
 import { createLocal } from "../../site/lib/net/local.js";
 
 type Move = { t: "add"; n: number };
@@ -164,6 +164,81 @@ describe("engine", () => {
     const count = out.length;
     say({ t: "chat" });
     expect(out.length).toBe(count + 1);
+    engine.stop();
+  });
+
+  it("sends the public view after the seats' views each round (AC6.2, AC9.1)", () => {
+    const { engine, out, say } = setup(["human", "human"]);
+    engine.start();
+    say({ t: "move", seat: 0, seq: 0, move: { t: "add", n: 2 } });
+    const types = out.map((m) => m.t);
+    expect(types).toEqual(["view", "view", "public", "view", "view", "public"]);
+    expect(out.at(-1)).toMatchObject({
+      seq: 1,
+      turn: 1,
+      view: { total: 2 },
+      legal: [],
+      note: "@0 added 2",
+    });
+  });
+
+  it("goes on from a snapshot on another device, at the same seq (AC6.5)", () => {
+    const a = setup(["human", "human"]);
+    a.engine.start();
+    a.say({ t: "move", seat: 0, seq: 0, move: { t: "add", n: 2 } });
+    const snap = JSON.parse(JSON.stringify(a.engine.snapshot()));
+    expect(snap).toMatchObject({ seq: 1, state: { total: 2 }, last: { seat: 0 }, places: null });
+    const seats = [0, 1].map((i) => ({ name: `P${i}`, kind: "human" as const }));
+    const transport = createLocal(seats);
+    const out: Msg[] = [];
+    transport.onMessage((m: Msg) => out.push(m));
+    const b = createEngine({ game: race, seats, seed: 99, transport, from: snap });
+    b.start();
+    expect(out.find((m) => m.t === "view" && m.seat === 1)).toMatchObject({
+      seq: 1,
+      view: { total: 2 },
+    });
+    transport.send({ v: 1, t: "move", seat: 1, seq: 1, move: { t: "add", n: 1 } });
+    expect(b.state.total).toBe(3);
+    const count = out.length;
+    b.resend();
+    expect(out.length).toBe(count + 3);
+    expect(b.seq).toBe(2);
+  });
+
+  it("lets the CPU play for a seat away 60 s on its turn, until it's back (AC6.6)", () => {
+    const seats = [0, 1].map((i) => ({ name: `P${i}`, kind: "human" as const, level: "easy" }));
+    const transport = createLocal(seats);
+    const timers: { fn: () => void; ms: number }[] = [];
+    const engine = createEngine({
+      game: race,
+      seats,
+      seed: 1,
+      transport,
+      delay: 5,
+      schedule: (fn: () => void, ms: number) => timers.push({ fn, ms }),
+      cancel: () => timers.splice(0),
+    });
+    const move = (seat: number) =>
+      transport.send({ v: 1, t: "move", seat, seq: engine.seq, move: { t: "add", n: 1 } });
+    engine.start();
+    engine.setAway([1]);
+    expect(timers).toEqual([]);
+    move(0);
+    expect(timers.map((t) => t.ms)).toEqual([IDLE_MS]);
+    timers.shift()?.fn();
+    expect(engine.state).toMatchObject({ total: 2, turn: 0 });
+    move(0);
+    // Still away: the CPU plays for it after its usual pause.
+    expect(timers.map((t) => t.ms)).toEqual([5]);
+    engine.setAway([]);
+    expect(timers).toEqual([]);
+    // Away on its own turn: the grace starts at once; a move from it means it's back.
+    engine.setAway([1]);
+    expect(timers.map((t) => t.ms)).toEqual([IDLE_MS]);
+    move(1);
+    expect(engine.state).toMatchObject({ total: 4, turn: 0 });
+    expect(timers).toEqual([]);
     engine.stop();
   });
 

@@ -899,6 +899,108 @@ body[data-layout="compact"] .sheet {
   padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
 }
 
+/* Online rooms (change 0002) */
+a.button {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target);
+  padding: 0.5rem 1rem;
+  border: 2px solid var(--text);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: none;
+}
+a.button.primary {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+.online-row {
+  margin: 0 0 1rem;
+  max-width: 44rem;
+  border-left: 6px solid var(--red);
+  padding-left: 1rem;
+}
+.box-actions {
+  grid-area: play;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.badge {
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--yellow);
+  color: var(--ink);
+  font-size: 0.8rem;
+  vertical-align: middle;
+}
+.lobby {
+  display: grid;
+  justify-items: start;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.who {
+  flex: 1 1 12rem;
+}
+.room-code {
+  margin: 0;
+  font-size: clamp(2.2rem, 10vw, 3.5rem);
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  font-variant-numeric: tabular-nums;
+}
+.qr {
+  width: min(60vw, 220px);
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.qr svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.room-link {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+}
+.room-bar {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.9rem;
+  font-size: 0.95rem;
+}
+.room-status {
+  margin: 0;
+  font-weight: 700;
+  color: var(--red);
+}
+:root[data-theme="dark"] .room-status,
+:root[data-theme="contrast"] .room-status {
+  color: #ffb4a8;
+}
+/* A big screen as the table (AC9.1): the board large, no side panel. */
+.match.big-table .board {
+  --card-w: clamp(72px, 18cqi, 160px);
+  min-height: 60vh;
+  font-size: 1.3rem;
+}
+body[data-layout="desk"] .match.big-table {
+  grid-template-columns: minmax(10rem, 16rem) minmax(0, 1fr);
+  grid-template-areas: "bar bar" "chips board" "msg msg";
+}
+.match.big-table .side {
+  display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -1,0 +1,44 @@
+/* The admin page (change 0003): tabs and tables, on top of the app's own styles. */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 1rem;
+}
+.tabs [aria-selected="true"] {
+  background: var(--felt);
+  border-color: var(--felt);
+  color: var(--paper);
+}
+.panel {
+  overflow-x: auto;
+}
+.panel table {
+  border-collapse: collapse;
+  min-width: min(100%, 40rem);
+  margin-bottom: 1rem;
+}
+.panel th,
+.panel td {
+  text-align: left;
+  padding: 0.35rem 0.9rem 0.35rem 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.panel td {
+  font-variant-numeric: tabular-nums;
+}
+.panel h2 {
+  margin-top: 1.25rem;
+}
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 2rem;
+  padding: 0;
+  list-style: none;
+}
+.facts strong {
+  font-size: 1.6rem;
+  display: block;
+}

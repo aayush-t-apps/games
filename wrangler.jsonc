@@ -17,5 +17,26 @@
     "run_worker_first": ["/health", "/.well-known/shipify.json", "/api/*"]
   },
   "observability": { "enabled": true, "head_sampling_rate": 1 },
-  "vars": { "APP_ID": "games", "APP_ENV": "production", "GIT_SHA": "dev" }
+  // Durable Objects (AGENTS.md, "Storage"): classes only add. Each class in src/worker/objects/
+  // is in `exports`; a deploy stops on a deleted or renamed class.
+  // No PR previews: Cloudflare makes none for a Worker with Durable Objects.
+  // Room: one per room code, a relay with seats and the last snapshot. Hub: one, the catalogue,
+  // live rooms and matches.
+  "durable_objects": {
+    "bindings": [{ "name": "ROOM", "class_name": "Room" }, { "name": "HUB", "class_name": "Hub" }]
+  },
+  "exports": {
+    "Room": { "type": "durable-object", "storage": "sqlite" },
+    "Hub": { "type": "durable-object", "storage": "sqlite" }
+  },
+  // ACCESS_TEAM (<team>.cloudflareaccess.com) and ACCESS_AUD (the Access app's audience tag) come
+  // from the owner's Access setup (docs/adr/0001-members-sign-in-with-access.md). Empty: online
+  // play is off. ADMIN_EMAIL is a runtime secret (shipify.json).
+  "vars": {
+    "APP_ID": "games",
+    "APP_ENV": "production",
+    "GIT_SHA": "dev",
+    "ACCESS_TEAM": "",
+    "ACCESS_AUD": ""
+  }
 }

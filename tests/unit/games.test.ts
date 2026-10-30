@@ -19,7 +19,7 @@ type Rules = {
   players: { min: number; max: number };
   hidden: boolean;
   init(seats: number, seed: number): State;
-  view(state: State, seat: number): Record<string, unknown>;
+  view(state: State, seat: number | null): Record<string, unknown>;
   legalMoves(state: State, seat: number): Move[];
   apply(state: State, seat: number, move: Move): State;
   winner(state: State): { places: number[][] } | null;
@@ -119,6 +119,32 @@ describe.each(GAMES.map((g) => [g.id, g] as const))("%s", (_id, game) => {
     if (game.hidden) expect(new Set(views).size).toBe(views.length);
     else expect(new Set(views).size).toBe(1);
     expect(JSON.stringify(game.view(state, 0))).not.toContain('"answer"');
+  });
+
+  it("shows no seat's hidden cards in the public view (AC6.2, AC9.1)", () => {
+    const state = game.init(game.players.max, 11);
+    const pub = game.view(state, null);
+    if (game.hidden) expect(pub.hand).toEqual([]);
+    else expect(pub).toEqual(game.view(state, 0));
+  });
+
+  it("fits an online room's state message: every view and the snapshot within 32 KB", () => {
+    let largest = 0;
+    for (let seed = 0; seed < 10; seed++) {
+      const seats = game.players.max;
+      let state = game.init(seats, seed);
+      for (let n = 0; n < 2000 && !game.winner(state); n++) {
+        const views = Array.from({ length: seats }, (_, s) => game.view(state, s));
+        const size = JSON.stringify({
+          views,
+          public: game.view(state, null),
+          snapshot: { state },
+        }).length;
+        largest = Math.max(largest, size);
+        state = game.apply(state, state.turn, game.ai(state, state.turn, "easy"));
+      }
+    }
+    expect(largest).toBeLessThan(32 * 1024);
   });
 });
 
