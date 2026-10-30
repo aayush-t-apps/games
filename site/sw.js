@@ -1,7 +1,7 @@
 // The service worker: the whole app from one cache per release, cache first, so a match never mixes
 // old and new files and an open app makes no requests. VERSION is shipify.json's version (a unit
 // test checks it): bump it with every release, so the new release installs as a new worker.
-const VERSION = "0.1.0";
+const VERSION = "0.1.1";
 const CACHE = `games-${VERSION}`;
 const SHELL = [
   "/",
