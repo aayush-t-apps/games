@@ -15,6 +15,7 @@ const suitIcon = (s) =>
 
 export default {
   status: (view, seat) => ({ text: `${view.counts[seat]} ${view.counts[seat] === 1 ? "card" : "cards"}` }),
+  sound: () => "card",
   hintText(move) {
     if (move.t === "draw") return "Draw a card.";
     if (move.t === "pass") return "Pass: keep your cards.";

@@ -94,6 +94,8 @@ export default {
     return { text: `${home} of 4 home`, color: PALETTE[view.colors[seat]] };
   },
   hintText: (move) => (move.t === "roll" ? "Roll the die." : "Move the token that glows."),
+  sound: (move, note) =>
+    move.t === "roll" ? "roll" : note.includes("captured") ? "capture" : note.includes("home") ? "home" : undefined,
   render(box, ctx) {
     const { colors, tokens, die: rolled, safe } = ctx.view;
     const movable = new Set(ctx.legal.filter((m) => m.t === "move").map((m) => m.k));
@@ -139,17 +141,22 @@ export default {
     const rolledNow = rolled !== null && rolled !== lastDie;
     lastDie = rolled;
     const canRoll = ctx.legal.some((m) => m.t === "roll");
+    // Whose roll: the die is ringed in that player's colour, and its label names them.
+    const mine = ctx.turn === ctx.me;
+    const who = mine ? "You" : ctx.names[ctx.turn];
+    const label = rolled ? `${who} rolled ${rolled}` : mine ? "Tap to roll" : `${who}'s roll`;
     const roll = el(
       "button",
       {
         type: "button",
+        style: `--seat:${PALETTE[colors[ctx.turn]]}`,
         class: `roll${ctx.kid && canRoll ? " legal" : ""}${ctx.hint?.t === "roll" ? " hint" : ""}`,
         dataset: { x: 15, y: 32, key: "roll" },
         "aria-label": rolled ? `The die shows ${rolled}` : "Roll the die",
         onclick: () => ctx.play({ t: "roll" }),
       },
       el("span", { class: `die-face${rolledNow ? " rolled" : ""}`, html: die(rolled) }),
-      el("span", { class: "label" }, rolled ? `Rolled ${rolled}` : "Roll"),
+      el("span", { class: "label" }, label),
     );
     box.replaceChildren(
       el("div", { class: "ludo" }, el("div", { class: "ludo-wrap", html: board(safe) }, ...pieces)),

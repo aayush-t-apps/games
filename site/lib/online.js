@@ -57,6 +57,7 @@ export function startRoom(g) {
   const max = Math.min(8, g.players[1]);
   const cfg = { seats: min, cpu: 0, level: "normal" };
   const status = el("p", { role: "status", class: "warn" });
+  const nick = el("input", { id: "room-nick", value: nickOf(), maxlength: "16", autocomplete: "nickname", required: true });
   const seatSelect = el(
     "select",
     {
@@ -90,13 +91,14 @@ export function startRoom(g) {
   }
   drawCpu();
   page(
-    `${g.name} online`,
+    `Invite friends: ${g.name}`,
     el(
       "form",
       {
         class: "setup",
         onsubmit: async (event) => {
           event.preventDefault();
+          store.setNick(nick.value);
           status.textContent = "Starting the room…";
           const { status: code, body } = await api("/api/member/rooms", {
             method: "POST",
@@ -116,6 +118,7 @@ export function startRoom(g) {
         },
       },
       el("p", { class: "about" }, `Seats for ${players(g.players)}. Friends join with the room's link, code or QR code, with no sign-in.`),
+      field("Your name", nick, "The others see it on your seat."),
       field("Seats", seatSelect),
       cpuBox,
       el(
@@ -145,36 +148,7 @@ export function startRoom(g) {
   );
 }
 
-// ---------- Join (anyone, AC6.1) ----------
-
-/** "Join a room": type the code. */
-export function showJoin() {
-  const input = el("input", { id: "join-code", class: "code-input", autocomplete: "off", autocapitalize: "characters", maxlength: "6", inputmode: "text", spellcheck: "false", placeholder: "K7M2QX" });
-  const status = el("p", { role: "status", class: "warn" });
-  page(
-    "Join a room",
-    el(
-      "form",
-      {
-        class: "setup",
-        onsubmit: (event) => {
-          event.preventDefault();
-          const code = input.value.trim().toUpperCase();
-          if (!/^[A-HJKMNP-Z2-9]{6}$/.test(code)) {
-            status.textContent = "A room code is 6 letters and digits, like K7M2QX.";
-            return;
-          }
-          history.pushState(null, "", `/r/${code}`);
-          openRoom(code);
-        },
-      },
-      field("Room code", input, "6 letters and digits, from the room's screen or its link."),
-      status,
-      el("div", { class: "row" }, el("button", { class: "primary big", type: "submit" }, "Join"), el("button", { type: "button", onclick: showHub }, "Back to games")),
-    ),
-  );
-  input.focus();
-}
+// ---------- Join (anyone, AC6.1): the code goes in on the hub, or the link opens here ----------
 
 /** Open a room's link: check it, load its game, ask for a nickname once, then connect. */
 export async function openRoom(code, join) {
@@ -428,7 +402,7 @@ function lobby() {
     el("div", { class: "qr", html: qrSvg(linkOf(code), `QR code for the link to room ${spaced(code)}`) }),
     el("p", { class: "room-link" }, linkOf(code)),
     el("div", { class: "row" }, el("button", { type: "button", onclick: share }, navigator.share ? "Share" : "Copy link")),
-    el("p", { class: "hint-text" }, "Friends scan the code, open the link, or tap Join a room and type the code."),
+    el("p", { class: "hint-text" }, `Friends scan the code, open the link, or type the code on ${location.host}.`),
   );
   const filled = info.seats.filter((x) => x.taken || x.cpu).length;
   const seatsPane = el(

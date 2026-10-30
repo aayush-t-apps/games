@@ -65,6 +65,30 @@ const TONES = {
     [659, 0.1],
     [784, 0.18],
   ],
+  // A game's own sounds (its view's sound(move, note) names one).
+  roll: [
+    [880, 0.03],
+    [620, 0.03],
+    [990, 0.03],
+    [700, 0.03],
+    [540, 0.06],
+  ],
+  card: [
+    [1200, 0.025],
+    [800, 0.04],
+  ],
+  drop: [
+    [700, 0.04],
+    [350, 0.08],
+  ],
+  capture: [
+    [392, 0.08],
+    [262, 0.14],
+  ],
+  home: [
+    [659, 0.08],
+    [880, 0.12],
+  ],
 };
 
 /** A short tone made in the browser (no sound files), and a tap of vibration where there is one. */

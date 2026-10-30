@@ -47,7 +47,7 @@ describe("service worker", () => {
     new Function("self", sw)(self);
     const answered = (path: string) => {
       let used = false;
-      handlers.fetch({
+      handlers.fetch?.({
         request: { method: "GET", mode: "navigate", url: `https://games.example${path}` },
         // The cache isn't here in Node: only whether the worker answers counts.
         respondWith: (answer: Promise<unknown>) => {
@@ -57,7 +57,12 @@ describe("service worker", () => {
       });
       return used;
     };
-    for (const path of ["/cdn-cgi/access/authorized?nonce=1", "/member", "/admin", "/api/member/me"])
+    for (const path of [
+      "/cdn-cgi/access/authorized?nonce=1",
+      "/member",
+      "/admin",
+      "/api/member/me",
+    ])
       expect(answered(path), path).toBe(false);
     expect(answered("/r/K7M2QX")).toBe(true);
   });

@@ -7,6 +7,7 @@ let shown = [];
 export default {
   status: (view, seat) => ({ text: `${view.pairs[seat]} ${view.pairs[seat] === 1 ? "pair" : "pairs"}` }),
   hintText: () => "Try the card that glows.",
+  sound: (_move, note) => (note.includes("found a pair") ? "home" : "card"),
   render(box, ctx) {
     const { cols, faces } = ctx.view;
     const legal = new Set(ctx.legal.map((m) => m.i));

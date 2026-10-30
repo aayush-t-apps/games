@@ -17,6 +17,7 @@ export default {
     return { text: `${n} ${n === 1 ? "card" : "cards"}, ${b} ${b === 1 ? "book" : "books"}` };
   },
   hintText: (move, _view, names) => `Ask ${names[move.from]} for ${plural(move.rank)}.`,
+  sound: () => "card",
   render(box, ctx) {
     const { hand, counts, books, stock } = ctx.view;
     const ranks = new Set(hand.map(rank));

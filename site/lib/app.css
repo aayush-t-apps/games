@@ -216,6 +216,13 @@ label {
   letter-spacing: 0.01em;
   padding: 0.4rem 0;
   margin-right: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+.brand img {
+  display: block;
+  border-radius: 8px;
 }
 .offline-mark {
   font-weight: 700;
@@ -255,14 +262,9 @@ main {
 .hub-title {
   margin-top: 0.5rem;
 }
-.welcome {
-  border: 2px dashed var(--wood);
-  border-radius: var(--radius);
-  padding: var(--gap);
-  margin-bottom: var(--gap);
-}
-.welcome .row input {
-  flex: 1 1 10rem;
+/* Each new screen comes in softly */
+#main > * {
+  animation: fade 0.2s ease-out;
 }
 .shelf {
   list-style: none;
@@ -328,7 +330,6 @@ main {
   justify-self: start;
   padding-inline: 2rem;
 }
-.offline-row,
 .scores,
 .install {
   margin: 1.5rem 0;
@@ -939,6 +940,11 @@ button.tile {
     translate: calc(var(--dx) * 100%) calc(var(--dy) * 100%);
   }
 }
+.roll .die-face {
+  border-radius: 14px;
+  outline: 5px solid var(--seat, transparent);
+  outline-offset: 3px;
+}
 .roll .rolled {
   animation: roll 0.4s ease-out;
 }
@@ -1126,11 +1132,42 @@ a.button.primary {
 .online-text p {
   margin: 0;
 }
-.online-row button:not(.primary),
-.online-row a.button {
-  background: var(--paper);
-  border-color: var(--paper);
+.join-form {
+  flex: 1 1 16rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.join-form .code-input {
+  flex: 1 1 8rem;
+  min-width: 0;
+  width: 8rem;
+  font-size: 1.25rem !important;
   color: var(--ink);
+  background: var(--card);
+}
+.join-form .hint-text {
+  flex-basis: 100%;
+  margin: 0;
+  color: inherit;
+}
+.join-form .hint-text:empty {
+  display: none;
+}
+.online-links {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
+  margin: 0;
+}
+.online-links:empty {
+  display: none;
+}
+.online-links a {
+  color: inherit;
+  font-weight: 700;
+  padding: 0.6rem 0;
 }
 /* Below the shelf: offline, scores and install side by side where there is room. */
 .extras {

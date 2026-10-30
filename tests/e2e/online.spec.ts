@@ -17,11 +17,12 @@ const column = (page: Page, n: number) =>
   page.getByRole("button", { name: new RegExp(`^Column ${n},`) });
 const turn = (page: Page) => page.locator("#turn");
 
-async function named(page: Page, nick: string) {
+/** A member invites friends to a game: the name is asked there, where others see it. */
+async function invite(page: Page, nick: string, game: string) {
   await page.goto("/");
-  await page.locator("#first-nick").fill(nick);
-  await page.getByRole("button", { name: "Save name" }).click();
-  await expect(page.getByRole("heading", { name: `Pick a game, ${nick}` })).toBeVisible();
+  await page.getByRole("button", { name: `Invite friends: ${game}` }).click();
+  await page.getByLabel("Your name").fill(nick);
+  await page.getByRole("button", { name: "Start the room" }).click();
 }
 
 test("a desktop and a phone play Four in a Row online, and the score shows (AC5.2, AC6.1, AC6.2, AC7.1, AC7.2)", async ({
@@ -39,9 +40,7 @@ test("a desktop and a phone play Four in a Row online, and the score shows (AC5.
   const phone = await (await browser.newContext({ ...devices["Pixel 7"], baseURL })).newPage();
 
   // The member starts a room.
-  await named(desk, "Ana");
-  await desk.getByRole("button", { name: "Play online: Four in a Row" }).click();
-  await desk.getByRole("button", { name: "Start the room" }).click();
+  await invite(desk, "Ana", "Four in a Row");
   const code = (await desk.locator(".room-code").textContent())?.trim() ?? "";
   expect(code).toMatch(/^[A-HJKMNP-Z2-9]{6}$/);
   await expect(desk.locator(".qr svg")).toBeVisible();
@@ -97,11 +96,12 @@ test("the owner taps Leave: the seat opens and the guest gets the owner's contro
     await browser.newContext({ ...devices["Desktop Chrome"], baseURL })
   ).newPage();
   const phone = await (await browser.newContext({ ...devices["Pixel 7"], baseURL })).newPage();
-  await named(desk, "Ana");
-  await desk.getByRole("button", { name: "Play online: Four in a Row" }).click();
-  await desk.getByRole("button", { name: "Start the room" }).click();
+  await invite(desk, "Ana", "Four in a Row");
   const code = (await desk.locator(".room-code").textContent())?.trim() ?? "";
-  await phone.goto(`/r/${code}`);
+  // The guest types the code on the hub this time.
+  await phone.goto("/");
+  await phone.getByLabel("Room code").fill(code.toLowerCase());
+  await phone.getByRole("button", { name: "Join", exact: true }).click();
   await phone.getByLabel("Your nickname (1 to 16 letters)").fill("Sam");
   await phone.getByRole("button", { name: "Join", exact: true }).click();
   await expect(phone.getByText("Waiting for Ana to start.")).toBeVisible();
@@ -138,7 +138,6 @@ test("the hub follows the admin's catalogue: a game turned off leaves it (AC8.2)
     }),
   );
   await page.goto("/");
-  await page.getByRole("button", { name: "Skip" }).click();
   await expect(page.getByRole("button", { name: "Play Ludo" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Play Memory" })).toHaveCount(0);
 });

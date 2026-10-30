@@ -5,8 +5,8 @@ const GAMES = ["Crazy Eights", "Go Fish", "Memory", "Ludo", "Four in a Row", "Qu
 
 async function open(page: Page) {
   await page.goto("/");
-  await page.getByRole("button", { name: "Skip" }).click();
-  await expect(page.getByRole("heading", { name: "Pick a game, Player" })).toBeVisible();
+  // No questions first: the games are right there.
+  await expect(page.getByRole("heading", { name: "Pick a game" })).toBeVisible();
 }
 
 async function setup(page: Page, game: string) {
@@ -112,8 +112,10 @@ test("plays offline after Download all (AC3.1, AC3.2)", async ({ page, context }
     if (!navigator.serviceWorker.controller)
       await new Promise((r) => navigator.serviceWorker.addEventListener("controllerchange", r));
   });
+  await page.getByRole("button", { name: "Settings" }).click();
   await page.getByRole("button", { name: "Download all for offline" }).click();
   await expect(page.locator("#download-status")).toHaveText("All games ready offline");
+  await page.getByRole("button", { name: "Done" }).click();
 
   await context.setOffline(true);
   await page.reload();
@@ -163,9 +165,20 @@ test("Settings changes the name, kept on this device, with no Export or Import",
   await expect(page.getByRole("button", { name: /Export/ })).toHaveCount(0);
   await expect(page.getByLabel(/Import/)).toHaveCount(0);
   await page.getByRole("button", { name: "Done" }).click();
-  await expect(page.getByRole("heading", { name: "Pick a game, Ana" })).toBeVisible();
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Pick a game, Ana" })).toBeVisible();
+  await setup(page, "Ludo");
+  await expect(page.getByLabel("You", { exact: true })).toHaveValue("Ana");
+});
+
+test("the name typed on Setup is kept for next time", async ({ page }) => {
+  await open(page);
+  await setup(page, "Memory");
+  await page.getByLabel("You", { exact: true }).fill("Sam");
+  await page.getByRole("button", { name: "Start" }).click();
+  await expect(page.locator("#board")).toBeVisible();
+  await page.goto("/");
+  await setup(page, "Ludo");
+  await expect(page.getByLabel("You", { exact: true })).toHaveValue("Sam");
 });
 
 test("shows Install when the browser offers it (AC3.4)", async ({ page }) => {

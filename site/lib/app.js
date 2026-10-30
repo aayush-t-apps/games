@@ -77,69 +77,14 @@ export function showHub() {
   if (ROOM_PATH.test(location.pathname)) history.replaceState(null, "", "/");
   screen = "hub";
   document.title = "Games";
-  const data = store.get();
+  // No questions first: pick a game and play. A name is asked only where others see it.
   show(
-    store.firstVisit ? welcome() : null,
-    el("h1", { class: "hub-title" }, `Pick a game, ${data.player.nick}`),
+    el("h1", { class: "hub-title" }, "Pick a game"),
     el("div", { id: "online-slot" }, onlineSection()),
     el("ul", { class: "shelf" }, games.map(gameBox)),
-    el(
-      "div",
-      { class: "extras" },
-      el(
-        "section",
-        { class: "offline-row", "aria-labelledby": "offline-title" },
-        el("h2", { id: "offline-title" }, "Play with no signal"),
-        el("p", {}, "Each game is saved on this device the first time you open it, or save them all now."),
-        el("button", { type: "button", id: "download-all", onclick: downloadAll }, "Download all for offline"),
-        el("p", { id: "download-status", role: "status" }),
-      ),
-      scoresSection(),
-      installSection(),
-    ),
+    el("div", { class: "extras" }, scoresSection(), installSection()),
   );
   markCached();
-}
-
-function welcome() {
-  const input = el("input", {
-    id: "first-nick",
-    name: "nick",
-    autocomplete: "nickname",
-    maxlength: "24",
-    placeholder: "Player",
-  });
-  const form = el(
-    "form",
-    {
-      class: "welcome",
-      onsubmit: (event) => {
-        event.preventDefault();
-        store.setNick(input.value);
-        showHub();
-      },
-    },
-    el("h2", {}, "Welcome! What should we call you?"),
-    el("label", { for: "first-nick" }, "Your name (you can skip this)"),
-    el(
-      "div",
-      { class: "row" },
-      input,
-      el("button", { class: "primary", type: "submit" }, "Save name"),
-      el(
-        "button",
-        {
-          type: "button",
-          onclick: () => {
-            store.setNick("");
-            showHub();
-          },
-        },
-        "Skip",
-      ),
-    ),
-  );
-  return form;
 }
 
 function gameBox(g) {
@@ -170,41 +115,73 @@ function gameBox(g) {
             {
               type: "button",
               class: "online-play",
-              "aria-label": `Play online: ${g.name}`,
+              "aria-label": `Invite friends: ${g.name}`,
               onclick: () => online().then((o) => o.startRoom(g)),
             },
-            "Play online",
+            "Invite friends",
           )
         : null,
     ),
   );
 }
 
-/** Online play on the hub (AC5.1): sign in, join a room, the online scores. Hidden until set up. */
+export const CODE = /^[A-HJKMNP-Z2-9]{6}$/;
+
+/**
+ * Play with friends (AC5.1): a friend's room code goes straight in here; a member invites from a
+ * game's own button. Hidden until online play is set up, and offline.
+ */
 function onlineSection() {
   if (!net.ready || !navigator.onLine) return null;
+  const input = el("input", {
+    id: "join-code",
+    class: "code-input",
+    autocomplete: "off",
+    autocapitalize: "characters",
+    maxlength: "6",
+    spellcheck: "false",
+    placeholder: "K7M2QX",
+    "aria-describedby": "join-status",
+  });
+  const status = el("p", { id: "join-status", class: "hint-text", role: "status" });
+  const join = (event) => {
+    event.preventDefault();
+    const code = input.value.trim().toUpperCase();
+    if (!CODE.test(code)) {
+      status.textContent = "A room code is 6 letters and digits, like K7M2QX.";
+      return input.focus();
+    }
+    history.pushState(null, "", `/r/${code}`);
+    online().then((o) => o.openRoom(code));
+  };
   return el(
     "section",
     { class: "online-row", "aria-labelledby": "online-title" },
     el(
       "div",
       { class: "online-text" },
-      el("h2", { id: "online-title" }, "Play with friends online"),
+      el("h2", { id: "online-title" }, "Play with friends"),
       el(
         "p",
         {},
         net.member
-          ? "Tap Play online on a game, then share the room's link, code or QR code."
-          : "Got a room code or link from a friend? Join with no sign-in.",
+          ? "Tap Invite friends on a game and share the link. Got a code? Type it here."
+          : "Got a code from a friend? Type it here. No sign-in needed.",
       ),
     ),
     el(
-      "div",
-      { class: "row" },
-      el("button", { type: "button", class: "primary", onclick: () => online().then((o) => o.showJoin()) }, "Join a room"),
-      el("button", { type: "button", onclick: () => online().then((o) => o.showScores()) }, "Online scores"),
-      net.member ? null : el("a", { class: "button", href: "/member" }, "Members: sign in"),
-      net.admin ? el("a", { class: "button", href: "/admin" }, "Admin") : null,
+      "form",
+      { class: "join-form", onsubmit: join },
+      el("label", { for: "join-code", class: "sr-only" }, "Room code"),
+      input,
+      el("button", { type: "submit", class: "primary" }, "Join"),
+      status,
+    ),
+    el(
+      "p",
+      { class: "online-links" },
+      net.member ? null : el("a", { href: "/member" }, "Sign in to invite friends"),
+      net.admin ? el("a", { href: "/admin" }, "Admin") : null,
     ),
   );
 }
@@ -484,6 +461,9 @@ async function startMatch(g, cfg) {
     );
     return;
   }
+  // The name typed for "You" is this device's name from now on (no separate question for it).
+  const mine = (cfg.seats[0].name || "").trim();
+  if (mine && mine !== store.get().player.nick) store.setNick(mine);
   let cpu = 0;
   const level = cfg.kid ? "easy" : cfg.level;
   const seats = cfg.seats.map((s, i) => ({
@@ -675,7 +655,8 @@ async function update(m) {
       m.log.unshift(text);
       say(`${text}.`);
       announce(text);
-      sound(m.seats[v.last.seat].kind === "human" ? "mine" : "move");
+      const own = m.view.sound?.(v.last.move, v.note);
+      sound(own ?? (m.seats[v.last.seat].kind === "human" ? "mine" : "move"));
     }
   }
   // The turn banner, when the turn passes to a person (the pass screen says it on its own).
@@ -893,6 +874,10 @@ function openSettings() {
         }),
         "Sounds",
       ),
+      el("h3", {}, "Play with no signal"),
+      el("p", { class: "hint-text" }, "Each game is saved here the first time you open it, or save them all now."),
+      el("button", { type: "button", id: "download-all", onclick: downloadAll }, "Download all for offline"),
+      el("p", { id: "download-status", role: "status" }),
       store.kept ? null : el("p", { class: "warn" }, "This browser isn't keeping data (private mode?), so your scores won't be kept."),
       install ? el("button", { type: "button", onclick: () => install?.() }, "Install Games") : null,
       el("div", { class: "row" }, el("button", { class: "primary", value: "done" }, "Done")),
