@@ -8,7 +8,7 @@
     "ages": "6+",
     "teaching": true,
     "version": 1,
-    "kb": 0,
+    "kb": 9,
     "about": "Match the suit or the rank. An 8 changes the suit. Be first out of cards."
   },
   {
@@ -20,7 +20,7 @@
     "ages": "4+",
     "teaching": true,
     "version": 1,
-    "kb": 0,
+    "kb": 8,
     "about": "Ask for a rank you hold. Collect books of four. Most books wins."
   },
   {
@@ -32,7 +32,7 @@
     "ages": "3+",
     "teaching": true,
     "version": 1,
-    "kb": 0,
+    "kb": 5,
     "about": "Turn two cards. Find a pair and play again. Most pairs wins."
   },
   {
@@ -44,7 +44,7 @@
     "ages": "5+",
     "teaching": true,
     "version": 1,
-    "kb": 0,
+    "kb": 11,
     "about": "Roll a 6 to come out. Race your four tokens home and send others back."
   },
   {
@@ -56,7 +56,7 @@
     "ages": "5+",
     "teaching": true,
     "version": 1,
-    "kb": 0,
+    "kb": 7,
     "about": "Drop discs in turn. Make a line of four across, up or on a slant."
   },
   {
@@ -68,7 +68,7 @@
     "ages": "5+",
     "teaching": true,
     "version": 1,
-    "kb": 0,
+    "kb": 7,
     "about": "Answer sums and kids' facts. Each right answer is a step. First home wins."
   }
 ]

@@ -5,7 +5,7 @@ import { int, fork } from "../../lib/rng.js";
 const W = 7;
 const H = 6;
 const ORDER = [3, 2, 4, 1, 5, 0, 6];
-const DEPTH = { easy: 1, normal: 4, hard: 7, best: 7 };
+const DEPTH = { easy: 1, normal: 3, hard: 6, best: 6 };
 const LINES = lines(W, H, 4).map((line) => line.map(([x, y]) => y * W + x));
 const LINES_AT = Array.from({ length: W * H }, (_, i) => LINES.filter((l) => l.includes(i)));
 const WIN = 1_000_000;
