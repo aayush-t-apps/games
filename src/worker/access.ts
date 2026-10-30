@@ -3,7 +3,7 @@
 // mistake in the dashboard can't open /api/member/* or /api/admin/*. Never log the token or email.
 
 export const TOKEN_HEADER = "cf-access-jwt-assertion";
-/** The caller on `make dev` and the tests, when Access isn't set up and the host is local. */
+/** The caller on `make dev` and the tests: a request to this machine never passes Access. */
 export const DEV_EMAIL = "dev@localhost";
 
 export interface AccessEnv {
@@ -107,19 +107,20 @@ export async function verifyToken(
   return claims.email;
 }
 
-/** Who calls: a member with a valid Access token, or the local developer when Access is off. */
+/**
+ * Who calls: the local developer on this machine (Access never sits in front of localhost, so
+ * `make dev` and the tests work with the production values set), else a member with a valid
+ * Access token. Cloudflare routes by host, so a production request is never local.
+ */
 export async function checkAccess(
   req: Request,
   env: AccessEnv,
   fetcher: Fetch = fetch,
 ): Promise<Checked> {
+  if (isLocal(req.url)) return { ok: true, caller: { email: DEV_EMAIL, dev: true } };
   const team = env.ACCESS_TEAM?.trim();
   const aud = env.ACCESS_AUD?.trim();
-  if (!team || !aud) {
-    return isLocal(req.url)
-      ? { ok: true, caller: { email: DEV_EMAIL, dev: true } }
-      : { ok: false, status: 503 };
-  }
+  if (!team || !aud) return { ok: false, status: 503 };
   const token = req.headers.get(TOKEN_HEADER);
   if (!token) return { ok: false, status: 401 };
   try {
