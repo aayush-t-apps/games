@@ -83,15 +83,19 @@ export function showHub() {
     el("div", { id: "online-slot" }, onlineSection()),
     el("ul", { class: "shelf" }, games.map(gameBox)),
     el(
-      "section",
-      { class: "offline-row", "aria-labelledby": "offline-title" },
-      el("h2", { id: "offline-title" }, "Play with no signal"),
-      el("p", {}, "Each game is saved on this device the first time you open it, or save them all now."),
-      el("button", { type: "button", id: "download-all", onclick: downloadAll }, "Download all for offline"),
-      el("p", { id: "download-status", role: "status" }),
+      "div",
+      { class: "extras" },
+      el(
+        "section",
+        { class: "offline-row", "aria-labelledby": "offline-title" },
+        el("h2", { id: "offline-title" }, "Play with no signal"),
+        el("p", {}, "Each game is saved on this device the first time you open it, or save them all now."),
+        el("button", { type: "button", id: "download-all", onclick: downloadAll }, "Download all for offline"),
+        el("p", { id: "download-status", role: "status" }),
+      ),
+      scoresSection(),
+      installSection(),
     ),
-    scoresSection(),
-    installSection(),
   );
   markCached();
 }
@@ -181,20 +185,24 @@ function onlineSection() {
   return el(
     "section",
     { class: "online-row", "aria-labelledby": "online-title" },
-    el("h2", { id: "online-title" }, "Play with friends online"),
     el(
-      "p",
-      {},
-      net.member
-        ? "Pick Play online on a game, then share the room's link, code or QR code."
-        : "Members start rooms. Anyone with a room's link or code joins, with no sign-in.",
+      "div",
+      { class: "online-text" },
+      el("h2", { id: "online-title" }, "Play with friends online"),
+      el(
+        "p",
+        {},
+        net.member
+          ? "Tap Play online on a game, then share the room's link, code or QR code."
+          : "Got a room code or link from a friend? Join with no sign-in.",
+      ),
     ),
     el(
       "div",
       { class: "row" },
-      net.member ? null : el("a", { class: "button primary", href: "/member" }, "Sign in to play online"),
-      el("button", { type: "button", onclick: () => online().then((o) => o.showJoin()) }, "Join a room"),
+      el("button", { type: "button", class: "primary", onclick: () => online().then((o) => o.showJoin()) }, "Join a room"),
       el("button", { type: "button", onclick: () => online().then((o) => o.showScores()) }, "Online scores"),
+      net.member ? null : el("a", { class: "button", href: "/member" }, "Members: sign in"),
       net.admin ? el("a", { class: "button", href: "/admin" }, "Admin") : null,
     ),
   );

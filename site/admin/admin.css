@@ -1,44 +1,211 @@
-/* The admin page (change 0003): tabs and tables, on top of the app's own styles. */
-.tabs {
+/* The admin page (changes 0003, 0004): header, tabs, fact cards, tables, the games list and the
+   back-up cards, on top of the app's own styles. One column on a phone; wider on a desktop. */
+main {
+  max-width: 64rem;
+}
+.admin-head {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin: 0.5rem 0 0.75rem;
+}
+.admin-head h1 {
+  margin: 0;
+}
+.who-am-i {
+  margin: 0.15rem 0 0;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+/* Tabs: one line, scrolling sideways on a narrow phone rather than wrapping. */
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  overflow-x: auto;
+  border-bottom: 3px solid var(--felt);
   margin: 0 0 1rem;
+  scrollbar-width: none;
+}
+.tabs [role="tab"] {
+  flex: 1 0 auto;
+  border: 2px solid transparent;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  padding-inline: 0.9rem;
 }
 .tabs [aria-selected="true"] {
   background: var(--felt);
-  border-color: var(--felt);
   color: var(--paper);
 }
-.panel {
-  overflow-x: auto;
+:root[data-theme="contrast"] .tabs [aria-selected="true"] {
+  border-color: #fff;
 }
-.panel table {
-  border-collapse: collapse;
-  min-width: min(100%, 40rem);
+
+.toolbar {
   margin-bottom: 1rem;
 }
-.panel th,
-.panel td {
-  text-align: left;
-  padding: 0.35rem 0.9rem 0.35rem 0;
-  border-bottom: 1px solid var(--line);
-  vertical-align: middle;
-}
-.panel td {
-  font-variant-numeric: tabular-nums;
-}
 .panel h2 {
-  margin-top: 1.25rem;
+  margin-top: 1.5rem;
 }
+.panel > h2:first-of-type,
+.panel > label:first-child {
+  margin-top: 0;
+}
+.panel > label + select {
+  display: block;
+  width: min(100%, 20rem);
+  margin: 0.25rem 0 1.25rem;
+}
+.empty {
+  color: var(--muted);
+}
+.note {
+  font-weight: 700;
+  min-height: 1.45em;
+}
+
+/* Fact cards: two across on a phone, four on a desktop. */
 .facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 2rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+  gap: 0.6rem;
   padding: 0;
+  margin: 0 0 1rem;
   list-style: none;
 }
-.facts strong {
-  font-size: 1.6rem;
+.fact {
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-left: 6px solid var(--felt);
+}
+.fact strong {
   display: block;
+  font-size: 1.8rem;
+  font-weight: 900;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.fact span {
+  color: var(--muted);
+}
+
+/* Tables scroll inside their own box, so the page never does. */
+.table-wrap {
+  overflow-x: auto;
+  margin-bottom: 1rem;
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.table-wrap table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.table-wrap th,
+.table-wrap td {
+  text-align: left;
+  padding: 0.45rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.table-wrap tbody tr:last-child > * {
+  border-bottom: 0;
+}
+.table-wrap thead th {
+  background: color-mix(in srgb, var(--felt) 10%, var(--surface));
+}
+.table-wrap td {
+  font-variant-numeric: tabular-nums;
+}
+button.sort {
+  min-height: 2rem;
+  min-width: 0;
+  padding: 0.2rem 0;
+  border: 0;
+  background: none;
+  font-weight: 800;
+  text-align: left;
+}
+button.sort::after {
+  /* Alt text "": aria-sort says the order to a screen reader, not the arrow. */
+  content: " ↕" / "";
+  color: var(--muted);
+  font-weight: 400;
+}
+[aria-sort="ascending"] button.sort::after {
+  content: " ↑" / "";
+  color: inherit;
+}
+[aria-sort="descending"] button.sort::after {
+  content: " ↓" / "";
+  color: inherit;
+}
+.hints {
+  padding-left: 1.2rem;
+}
+
+/* Games: one row per game, wrapping on a phone. */
+.game-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.game-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1.25rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+.game-list li:last-child {
+  border-bottom: 0;
+}
+.game-list li.off .game-name strong {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.game-name {
+  flex: 1 1 12rem;
+  display: grid;
+}
+.game-name span {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+.order button {
+  font-size: 1.2rem;
+  padding: 0.3rem 0.8rem;
+}
+
+/* Back up and Restore */
+.card {
+  margin: 1.5rem 0 1rem;
+  padding: 0.9rem 1rem 1rem;
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.card h2 {
+  margin-top: 0;
+}
+.card input[type="datetime-local"] {
+  min-height: var(--target);
+  font: inherit;
+  padding: 0.4rem 0.6rem;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: inherit;
+  max-width: 100%;
 }

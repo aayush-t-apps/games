@@ -2,7 +2,14 @@
 // pings, and stopping for good when the room ends or refuses the device. A fake WebSocket here;
 // tests/unit/objects.test.ts and tests/e2e run the real one.
 import { beforeEach, describe, expect, it } from "vitest";
-import { BACKOFF, createRoom, keepToken, PING_MS, tokens } from "../../site/lib/net/room.js";
+import {
+  BACKOFF,
+  createRoom,
+  forgetTokens,
+  keepToken,
+  PING_MS,
+  tokens,
+} from "../../site/lib/net/room.js";
 
 class FakeSocket {
   static all: FakeSocket[] = [];
@@ -35,6 +42,7 @@ const store = () => {
   return {
     getItem: (k: string) => map.get(k) ?? null,
     setItem: (k: string, v: string) => void map.set(k, v),
+    removeItem: (k: string) => void map.delete(k),
   } as unknown as Storage;
 };
 
@@ -86,6 +94,8 @@ describe("the room transport", () => {
       room: { seats: [{ nick: "Ana", cpu: false, online: true }] },
     });
     expect(tokens("K7M2QX", storage)).toEqual({ ownerToken: "own", seatToken: "seat" });
+    forgetTokens("K7M2QX", storage);
+    expect(tokens("K7M2QX", storage)).toEqual({});
     expect(room.seat).toBe(1);
     expect(room.up).toBe(true);
     expect(room.peers()).toEqual([{ seat: 0, name: "Ana", kind: "human", online: true }]);
@@ -178,5 +188,6 @@ describe("the room transport", () => {
     } as unknown as Storage;
     expect(tokens("K7M2QX", blocked)).toEqual({});
     expect(() => keepToken("K7M2QX", { seatToken: "x" }, blocked)).not.toThrow();
+    expect(() => forgetTokens("K7M2QX", blocked)).not.toThrow();
   });
 });
