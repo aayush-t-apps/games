@@ -120,6 +120,35 @@ test("the owner taps Leave: the seat opens and the guest gets the owner's contro
   await phone.context().close();
 });
 
+test("a guest gets Join and Sign in; a member gets Invite friends and Sign out (AC5.1)", async ({
+  page,
+}) => {
+  // A signed-out visitor: Access answers the member call with its redirect.
+  await page.route("**/api/member/me", (route) =>
+    route.fulfill({ status: 302, headers: { location: "https://team.example/login" } }),
+  );
+  await page.goto("/");
+  await expect(page.getByLabel("Room code")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Sign in to invite friends" })).toHaveAttribute(
+    "href",
+    "/member",
+  );
+  await expect(page.getByRole("button", { name: /^Invite friends/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "Join", exact: true }).click();
+  await expect(page.locator("#join-status")).toHaveText(
+    "A room code is 6 letters and digits, like K7M2QX.",
+  );
+
+  // The local developer is a member: Invite friends on each game, and Sign out.
+  await page.unroute("**/api/member/me");
+  await page.reload();
+  await expect(page.getByRole("button", { name: /^Invite friends/ })).toHaveCount(6);
+  await expect(page.getByRole("link", { name: "Sign out" })).toHaveAttribute(
+    "href",
+    "/cdn-cgi/access/logout",
+  );
+});
+
 test("a room's link that has ended says so (AC6.7)", async ({ page }) => {
   await page.goto("/r/ABCDEF");
   await expect(page.getByRole("heading", { name: "This room has ended" })).toBeVisible();

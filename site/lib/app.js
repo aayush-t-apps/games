@@ -182,6 +182,8 @@ function onlineSection() {
       { class: "online-links" },
       net.member ? null : el("a", { href: "/member" }, "Sign in to invite friends"),
       net.admin ? el("a", { href: "/admin" }, "Admin") : null,
+      // Access's own sign-out (the service worker leaves /cdn-cgi/ to Cloudflare).
+      net.member ? el("a", { href: "/cdn-cgi/access/logout" }, "Sign out") : null,
     ),
   );
 }
