@@ -360,6 +360,37 @@ main {
 .setup {
   max-width: 36rem;
 }
+/* How to play: a small felt card on Setup */
+.how {
+  margin: 0 0 1rem;
+  padding: 0 1rem;
+  border-radius: var(--radius);
+  background: var(--table);
+  color: var(--on-table);
+}
+:root[data-theme="contrast"] .how {
+  border: 2px solid #fff;
+}
+.how summary {
+  padding: 0.7rem 0;
+  font-weight: 800;
+  cursor: pointer;
+}
+.how ol {
+  margin: 0;
+  padding: 0 0 0.9rem 1.3rem;
+  display: grid;
+  gap: 0.35rem;
+}
+.how[open] ol {
+  animation: fade 0.3s ease-out;
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+    translate: 0 -0.4rem;
+  }
+}
 .setup fieldset {
   border: 2px solid var(--line);
   border-radius: var(--radius);
@@ -457,6 +488,103 @@ main {
   border-color: var(--glow);
   background: color-mix(in srgb, var(--glow) 22%, transparent);
 }
+/* A CPU thinking: three dots in its chip */
+.dots {
+  display: inline-flex;
+  gap: 3px;
+}
+.dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: think 0.9s ease-in-out infinite;
+}
+.dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes think {
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+  }
+  30% {
+    opacity: 1;
+    translate: 0 -3px;
+  }
+}
+
+/* The banner over the board: whose turn, or how the match ended */
+.banner {
+  grid-area: board;
+  align-self: start;
+  justify-self: center;
+  z-index: 5;
+  position: relative;
+  margin: 0.75rem 0 0;
+  padding: 0.4rem 1.1rem;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--ink);
+  font-size: clamp(1.1rem, 4vw, 1.5rem);
+  font-weight: 900;
+  pointer-events: none;
+  animation: banner 1.4s ease-out both;
+}
+@keyframes banner {
+  from {
+    opacity: 0;
+    translate: 0 -50%;
+  }
+  15%,
+  75% {
+    opacity: 1;
+    translate: 0 0;
+  }
+  to {
+    opacity: 0;
+  }
+}
+.banner.end {
+  align-self: center;
+  margin: 0;
+  padding: 0.7rem 1.6rem;
+  font-size: clamp(1.6rem, 7vw, 2.6rem);
+  animation: pop 0.45s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    scale: 0.4;
+  }
+}
+.bit {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.5rem;
+  height: 0.8rem;
+  border-radius: 2px;
+  background: var(--c);
+  opacity: 0;
+  animation: burst 1.1s ease-out 0.15s;
+}
+@keyframes burst {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    translate: var(--x) var(--y);
+    rotate: 1.5turn;
+  }
+}
+
 .dot {
   width: 0.9rem;
   height: 0.9rem;
@@ -631,6 +759,18 @@ body[data-layout="desk"] .side {
 .slide {
   animation: slide 0.3s ease-out;
 }
+/* The deal: a match's first cards, tiles or answers come in one after another */
+.board .dealt {
+  animation: deal 0.3s ease-out backwards;
+  animation-delay: calc(min(var(--i), 20) * 40ms);
+}
+@keyframes deal {
+  from {
+    opacity: 0;
+    translate: 0 -2.5rem;
+    rotate: -10deg;
+  }
+}
 @keyframes slide {
   from {
     transform: translateY(45%) rotate(-8deg);
@@ -703,6 +843,20 @@ body[data-layout="desk"] .side {
   stroke: #fff;
   stroke-width: 10;
 }
+/* The winning line shines a few times */
+.c4 .win {
+  animation: shine 0.5s ease-in-out 0.35s 3;
+}
+.c4 .drop.win {
+  animation:
+    drop 0.35s cubic-bezier(0.5, 0, 0.9, 0.6),
+    shine 0.5s ease-in-out 0.35s 3;
+}
+@keyframes shine {
+  50% {
+    opacity: 0.45;
+  }
+}
 
 /* Memory */
 .memory {
@@ -727,6 +881,15 @@ button.tile {
 }
 .flip {
   animation: flip 0.3s ease-out;
+}
+.tile.taken {
+  animation: taken 0.6s ease-out;
+}
+@keyframes taken {
+  from {
+    background: var(--glow);
+    scale: 1.12;
+  }
 }
 @keyframes flip {
   from {
@@ -762,9 +925,28 @@ button.tile {
   border-radius: 50%;
   background: none;
   scale: 1.3;
-  transition:
-    left 0.25s ease-out,
-    top 0.25s ease-out;
+}
+/* A token is one square wide, so --dx and --dy (squares) slide it from its last place. */
+.piece.slid {
+  animation: slid 0.3s ease-out;
+}
+.piece.knocked {
+  z-index: 3;
+  animation: slid 0.6s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+@keyframes slid {
+  from {
+    translate: calc(var(--dx) * 100%) calc(var(--dy) * 100%);
+  }
+}
+.roll .rolled {
+  animation: roll 0.4s ease-out;
+}
+@keyframes roll {
+  from {
+    rotate: -1turn;
+    scale: 0.6;
+  }
 }
 .match.kid .piece {
   scale: 1.6;
@@ -837,6 +1019,10 @@ button.piece {
 /* Result */
 .result {
   max-width: 34rem;
+}
+.result.won h1,
+.pop {
+  animation: pop 0.45s cubic-bezier(0.3, 1.5, 0.5, 1);
 }
 .places {
   font-size: 1.25rem;

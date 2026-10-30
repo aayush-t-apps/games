@@ -6,6 +6,9 @@ import { el } from "../../lib/ui.js";
 
 let picking = null;
 let lastTop = null;
+// The hand at the last draw, and whose it was: a card you draw slides in.
+let held = [];
+let heldBy = null;
 
 const suitIcon = (s) =>
   `<svg viewBox="0 0 10 10" aria-hidden="true" focusable="false">${suitShape(s, 0, 0, 10)}</svg>`;
@@ -25,6 +28,9 @@ export default {
     if (!ctx.legal.length || !hand.includes(picking)) picking = null;
     const fresh = top !== lastTop;
     lastTop = top;
+    const before = ctx.first || ctx.me !== heldBy ? hand : held;
+    const drawn = (card) => (before.includes(card) ? "" : " slide");
+    [held, heldBy] = [hand, ctx.me];
     const play = (card) => {
       if (rank(card) === 8 && ctx.legal.some((l) => l.card === card)) {
         picking = card;
@@ -64,7 +70,7 @@ export default {
       hand.map((card, i) =>
         el("button", {
           type: "button",
-          class: `card-btn${kidMark({ t: "play", card })}${hinted({ t: "play", card })}${picking === card ? " picked" : ""}`,
+          class: `card-btn${drawn(card)}${kidMark({ t: "play", card })}${hinted({ t: "play", card })}${picking === card ? " picked" : ""}`,
           dataset: { x: i, y: 1, key: `c${card}` },
           "aria-label": `Play ${spoken(card)}`,
           onclick: () => play(card),

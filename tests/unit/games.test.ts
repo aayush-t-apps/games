@@ -160,6 +160,7 @@ describe("the game list (AC1.1)", () => {
     version: number;
     kb: number;
     about: string;
+    how: string[];
   }[];
   const folders = readdirSync(DIR).filter((f) => statSync(join(DIR, f)).isDirectory());
 
@@ -185,6 +186,14 @@ describe("the game list (AC1.1)", () => {
       expect(entry.ages).toMatch(/^\d+\+$/);
       expect(entry.cpu).toBe(true);
       expect(entry.about.length).toBeGreaterThan(10);
+    }
+  });
+
+  it("has a short how-to-play card for each game: 2 to 4 steps", () => {
+    for (const entry of list) {
+      expect(entry.how.length, entry.id).toBeGreaterThanOrEqual(2);
+      expect(entry.how.length, entry.id).toBeLessThanOrEqual(4);
+      for (const step of entry.how) expect(step.length, entry.id).toBeLessThanOrEqual(100);
     }
   });
 

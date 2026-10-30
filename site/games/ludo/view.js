@@ -81,6 +81,10 @@ function board(safe) {
   return boardSvg;
 }
 
+// Where each token was at the last draw ("seat:k" → [x, y, p]), so a moved one slides from there.
+let was = new Map();
+let lastDie = null;
+
 const where = (p) =>
   p === -1 ? "in base" : p === HOME ? "home" : p > 50 ? `${HOME - p} from home` : `${p + 1} squares out`;
 
@@ -93,17 +97,26 @@ export default {
   render(box, ctx) {
     const { colors, tokens, die: rolled, safe } = ctx.view;
     const movable = new Set(ctx.legal.filter((m) => m.t === "move").map((m) => m.k));
+    if (ctx.first) was = new Map();
+    const now = new Map();
     const pieces = [];
     tokens.forEach((list, seat) => {
       const color = colors[seat];
       list.forEach((p, k) => {
-        const [x, y] = place(color, p, k);
+        const [cx, cy] = place(color, p, k);
         // Tokens that share a square sit a little apart.
         const twins = list.filter((q, j) => j < k && q === p && p !== -1 && p !== HOME).length;
-        const style = `left:${((x - 0.5 + twins * 0.18) / 15) * 100}%;top:${((y - 0.5 - twins * 0.18) / 15) * 100}%`;
+        const [x, y] = [cx + twins * 0.18, cy - twins * 0.18];
+        now.set(`${seat}:${k}`, [x, y, p]);
+        // A moved token slides from its last place; one sent back to base (captured) flies there.
+        const [ox, oy, op] = was.get(`${seat}:${k}`) ?? [x, y, p];
+        const moved = ox !== x || oy !== y;
+        const motion = moved ? `;--dx:${(ox - x).toFixed(2)};--dy:${(oy - y).toFixed(2)}` : "";
+        const style = `left:${((x - 0.5) / 15) * 100}%;top:${((y - 0.5) / 15) * 100}%${motion}`;
         const label = `${NAMES[color]} token ${k + 1}, ${where(p)}`;
+        const classes = ["piece"];
+        if (moved) classes.push(p === -1 && op !== -1 ? "knocked" : "slid");
         if (seat === ctx.me && p !== HOME) {
-          const classes = ["piece"];
           if (ctx.kid && movable.has(k)) classes.push("legal");
           if (ctx.hint?.t === "move" && ctx.hint.k === k) classes.push("hint");
           pieces.push(
@@ -111,17 +124,20 @@ export default {
               type: "button",
               class: classes.join(" "),
               style,
-              dataset: { x: Math.round(x * 2), y: Math.round(y * 2), key: `k${k}` },
+              dataset: { x: Math.round(cx * 2), y: Math.round(cy * 2), key: `k${k}` },
               "aria-label": `Move ${label}`,
               onclick: () => ctx.play({ t: "move", k }),
               html: token(PALETTE[color]),
             }),
           );
         } else {
-          pieces.push(el("span", { class: "piece", style, role: "img", "aria-label": label, html: token(PALETTE[color]) }));
+          pieces.push(el("span", { class: classes.join(" "), style, role: "img", "aria-label": label, html: token(PALETTE[color]) }));
         }
       });
     });
+    was = now;
+    const rolledNow = rolled !== null && rolled !== lastDie;
+    lastDie = rolled;
     const canRoll = ctx.legal.some((m) => m.t === "roll");
     const roll = el(
       "button",
@@ -132,7 +148,7 @@ export default {
         "aria-label": rolled ? `The die shows ${rolled}` : "Roll the die",
         onclick: () => ctx.play({ t: "roll" }),
       },
-      el("span", { class: "die-face", html: die(rolled) }),
+      el("span", { class: `die-face${rolledNow ? " rolled" : ""}`, html: die(rolled) }),
       el("span", { class: "label" }, rolled ? `Rolled ${rolled}` : "Roll"),
     );
     box.replaceChildren(

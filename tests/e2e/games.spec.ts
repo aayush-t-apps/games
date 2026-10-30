@@ -32,7 +32,15 @@ test("Four in a Row plays to the end against the CPU and counts the score (AC1.2
   test.setTimeout(120_000);
   await open(page);
   await setup(page, "Four in a Row");
+  // How to play is open on a game's first play, and closed once a match is done (AC4.5).
+  const how = page.locator("details.how");
+  await expect(how).toHaveAttribute("open");
+  await expect(how.locator("li").first()).toHaveText("Tap a column to drop your disc into it.");
   await page.getByRole("button", { name: "Start" }).click();
+  // A banner says whose turn it is, and a CPU shows that it is thinking (AC1.6, AC1.7).
+  await expect(page.locator(".banner")).toHaveText("Your turn");
+  await freeColumn(page).click();
+  await expect(page.locator(".chip.thinking")).toContainText("CPU 1");
   const result = page.getByRole("heading", { level: 1, name: /won|draw/ });
   const yourTurn = turn(page).filter({ hasText: "Your turn" });
   // At most 21 moves are yours; the result screen replaces the match when it ends.
@@ -46,6 +54,8 @@ test("Four in a Row plays to the end against the CPU and counts the score (AC1.2
   await page.getByRole("button", { name: "Choose another game" }).click();
   const row = page.locator(".scores tr", { hasText: "Four in a Row" });
   await expect(row.locator("td").first()).toHaveText("1");
+  await setup(page, "Four in a Row");
+  await expect(how).not.toHaveAttribute("open");
 });
 
 test("Go Fish pass-and-play covers the screen between players (AC2.1, AC2.2)", async ({ page }) => {

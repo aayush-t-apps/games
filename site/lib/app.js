@@ -13,6 +13,7 @@ import { announce, el, fillNames, ordinal, passScreen, setSound, sound } from ".
 const TYPES = { cards: "Cards", board: "Board game", kids: "Kids" };
 const LEVEL_NAMES = { easy: "Easy", normal: "Normal", hard: "Hard" };
 const CPU_PAUSE = 600;
+const CONFETTI = ["red", "blue", "yellow", "green"];
 
 const main = document.getElementById("main");
 export const store = createStore();
@@ -377,6 +378,15 @@ function showSetup(g, previous) {
         },
         el("h1", {}, g.name),
         el("p", { class: "about" }, g.about),
+        // How to play: open until this device has finished a match of this game.
+        g.how
+          ? el(
+              "details",
+              { class: "how", open: store.totals(g.id).played === 0 },
+              el("summary", {}, "How to play"),
+              el("ol", {}, g.how.map((line) => el("li", {}, line))),
+            )
+          : null,
         el(
           "fieldset",
           {},
@@ -668,9 +678,13 @@ async function update(m) {
       sound(m.seats[v.last.seat].kind === "human" ? "mine" : "move");
     }
   }
+  // The turn banner, when the turn passes to a person (the pass screen says it on its own).
+  let flag = !v.places && turn !== m.turnSeen && m.seats[turn].kind === "human";
+  m.turnSeen = turn;
   if (!m.online && !v.places && m.seats[turn].kind === "human") {
     if (m.rules.hidden && m.humans.length > 1 && m.passed !== turn) {
       m.passed = turn;
+      flag = false;
       draw(m, true);
       await passScreen(m.names[turn]);
       if (match !== m) return;
@@ -678,6 +692,26 @@ async function update(m) {
     m.shown = turn;
   }
   draw(m);
+  if (flag) banner(turnText(m, v));
+}
+
+/**
+ * A short banner over the board: whose turn it is, or (`end`) how the match ended, with a burst of
+ * confetti for a win. Screen readers get the same words from the turn line and the live region.
+ */
+function banner(text, end = false, win = false) {
+  document.querySelector(".banner")?.remove();
+  const node = el("p", { class: `banner${end ? " end" : ""}`, "aria-hidden": "true" }, text);
+  if (win)
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * 2 * Math.PI;
+      const far = i % 2 ? 6 : 9;
+      const x = (Math.cos(angle) * far).toFixed(1);
+      const y = (Math.sin(angle) * far * 0.6).toFixed(1);
+      node.append(el("i", { class: "bit", style: `--x:${x}rem;--y:${y}rem;--c:var(--${CONFETTI[i % 4]})` }));
+    }
+  document.querySelector(".match")?.append(node);
+  if (!end) setTimeout(() => node.remove(), 1400);
 }
 
 function turnText(m, v) {
@@ -698,12 +732,18 @@ function draw(m, covered = false) {
   chips.replaceChildren(
     ...m.seats.map((s, i) => {
       const status = m.view.status(v.view, i);
+      // A CPU on its turn shows three dots while it thinks.
+      const thinking = i === v.turn && s.kind === "cpu" && !v.places;
       return el(
         "li",
-        { class: `chip${i === v.turn ? " active" : ""}`, "aria-current": i === v.turn ? "true" : null },
+        {
+          class: `chip${i === v.turn ? " active" : ""}${thinking ? " thinking" : ""}`,
+          "aria-current": i === v.turn ? "true" : null,
+        },
         status.color ? el("span", { class: "dot", style: `background:${status.color}` }) : null,
         el("strong", {}, s.name),
         el("span", {}, status.text),
+        thinking ? el("span", { class: "dots", "aria-hidden": "true" }, el("i"), el("i"), el("i")) : null,
       );
     }),
   );
@@ -718,6 +758,8 @@ function draw(m, covered = false) {
     board.replaceChildren();
     return;
   }
+  const first = !m.dealt;
+  m.dealt = true;
   m.view.render(board, {
     view: v.view,
     legal: v.legal,
@@ -727,9 +769,16 @@ function draw(m, covered = false) {
     kid: m.cfg.kid,
     hint: m.hint,
     layout: layout(),
+    first,
     play: (move) => send(m, { t: "move", seat: m.shown, seq: v.seq, move }),
     say,
   });
+  // The deal: on a match's first look, the cards, tiles or answers come in one after another.
+  if (first)
+    board.querySelectorAll(".hand > *, .memory > *, .answers > *").forEach((n, i) => {
+      n.classList.add("dealt");
+      n.style.setProperty("--i", String(i));
+    });
   refresh(board, m.hint ? board.querySelector(".hint")?.dataset.key : had, Boolean(had) || Boolean(m.hint));
 }
 
@@ -751,14 +800,17 @@ function finish(m, places) {
           : `${firsts.join(" and ")} won`
         : `${firsts.join(" and ")} won!`;
   if (won || m.humans.length > 1) sound("win");
+  // Confetti for a win on this device, or any winner among friends; none for a draw.
+  const cheer = (won || m.humans.length > 1) && (solo || places.length > 1);
   announce(headline);
+  banner(headline, true, cheer);
   setTimeout(() => {
     if (match !== m) return;
     let rank = 1;
     show(
       el(
         "section",
-        { class: "result", "aria-labelledby": "result-title" },
+        { class: `result${cheer ? " won" : ""}`, "aria-labelledby": "result-title" },
         el("h1", { id: "result-title" }, headline),
         el(
           "ol",
@@ -782,7 +834,7 @@ function finish(m, places) {
       ),
     );
     main.querySelector("h1")?.focus();
-  }, 1200);
+  }, 1500);
 }
 
 // ---------- Settings ----------
