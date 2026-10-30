@@ -35,10 +35,14 @@ test("Four in a Row plays to the end against the CPU and counts the score (AC1.2
   await setup(page, "Four in a Row");
   await page.getByRole("button", { name: "Start" }).click();
   const result = page.getByRole("heading", { level: 1, name: /won|draw/ });
-  while (!(await result.isVisible())) {
-    if ((await turn(page).textContent()) === "Your turn") await freeColumn(page).click();
-    await page.waitForTimeout(200);
+  const yourTurn = turn(page).filter({ hasText: "Your turn" });
+  // At most 21 moves are yours; the result screen replaces the match when it ends.
+  for (let i = 0; i < 22; i++) {
+    await expect(yourTurn.or(result)).toBeVisible({ timeout: 15_000 });
+    if (await result.isVisible()) break;
+    await freeColumn(page).click();
   }
+  await expect(result).toBeVisible();
   await expect(page.locator(".places li")).toHaveCount(2);
   await page.getByRole("button", { name: "Choose another game" }).click();
   const row = page.locator(".scores tr", { hasText: "Four in a Row" });
