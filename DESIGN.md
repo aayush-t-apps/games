@@ -9,18 +9,21 @@ a laptop, or a TV browser. The one job: pick a game and be playing in two taps, 
 
 | Screen | Primary action |
 |---|---|
-| Hub: the shelf of six games, offline, scores, install | **Play** (one per game) |
+| Hub: "Pick a game", Play with friends, the shelf of six games, scores, install | **Play** (one per game) |
 | Setup: How to play, seats (you, people, CPUs), CPU level, kid mode | **Start** |
 | Match: the felt table, the players, the moves | play a move |
 | Result: the places | **Play again** |
-| Settings (a bottom sheet on phones): name, kid mode, theme, sound, Install | **Done** |
-| Start a room (members): seats, CPU seats, level | **Start the room** |
-| Join: the room code, or a nickname for a room's link | **Join** (or **Join as Table**) |
+| Settings (a bottom sheet on phones): name, kid mode, theme, sound, Download all for offline, Install | **Done** |
+| Invite friends (members): your name, seats, CPU seats, level | **Start the room** |
+| Join (a room's link): a nickname | **Join** (or **Join as Table**) |
 | Lobby (`/r/<code>`): an Invite panel (the code large, its QR code, the link) and a Seats panel (a row per seat, with owner, host and you tags) | **Start** (the owner), **Share** (everyone) |
-| Online scores: per game, top players and the last matches, in two panels | pick a game |
+| Online scores (after an online match): per game, top players and the last matches | pick a game |
 | Admin (`/admin`): Overview (fact cards), Games (a list), Rooms, Scores (Export, Restore) | **Refresh**, **Save**, **Close**, **Export** |
 
-The hub's online panel is a strip of felt led by **Join a room**. Forms put each label above its
+Nothing is asked before the first game: the hub opens on the games. Its **Play with friends**
+panel is a strip of felt with a room-code field and **Join**, and a quiet **Sign in to invite
+friends** link; a member gets **Invite friends** on each game. The brand is the logo, a card and a
+red die on felt with no text, beside "Games" in the wooden bar. Forms put each label above its
 full-width field. Panels are cards: surface colour, a 2 px line border and the 10 px radius. Red
 outlines mark what ends something for others (**Close the room**, **Kick**). The admin tables
 scroll inside their own box on a phone and sort by a column head (↕, ↑, ↓).
@@ -86,8 +89,9 @@ Result screen. Setup has a felt **How to play** card, open until a game's first 
 
 ## States
 
-- **First visit:** "Welcome! What should we call you?" with **Save name** and **Skip** (the name
-  stays "Player").
+- **First visit:** no question: the games. The name is "Player" until one is typed for "You" on
+  Setup, or on Invite friends.
+- **A bad room code:** "A room code is 6 letters and digits, like K7M2QX." under the field.
 - **Loading a game:** "Getting Ludo…".
 - **Offline:** an "Offline" mark in the bar; a game not yet saved says "Needs signal once" and its
   Play button is off.

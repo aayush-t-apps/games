@@ -1,19 +1,21 @@
 ---
 change: 5
 app: games
-title: "Games that feel alive: a turn banner, how to play, a CPU cue, deal and capture moves, a win moment"
+title: "Games that feel alive, a simpler hub, a logo and members' sign-in that works"
 bump: minor
 released: v0.4.0
 task: aayush-t-apps/shipify#624
 ---
 
-# 0005: Games that feel alive: a turn banner, how to play, a CPU cue, deal and capture moves, a win moment
+# 0005: Games that feel alive, a simpler hub, a logo and members' sign-in that works
 
 ## Why
 
-A match works, but it feels flat: the turn shows only as a small line of text, a CPU's pause looks
-like a freeze, a new player gets no help with the rules, and a win goes straight to a list of
-places. Small, quiet motion and one short card fix this, with no new files and no downloads.
+A match works, but it feels flat: the turn is a small line of text, a CPU's pause looks like a
+freeze, a new player gets no help with the rules, and a win goes straight to a list. The hub asks
+for a name before anyone plays, and its online panel (**Join a room**, **Online scores**,
+**Members: sign in**) confuses a visitor. Members can't sign in at all: the service worker answered
+Access's return page from its cache (owner, 2026-10-30). The app also has no real logo.
 
 ## Spec changes
 
@@ -27,67 +29,78 @@ places. Small, quiet motion and one short card fix this, with no new files and n
   the Result screen.
 - AC4.5 WHEN I open Setup for a game THE APP SHALL show a **How to play** card of 2 to 4 short
   steps, open until this device has finished a match of that game, and closed (but there) after.
+- AC4.6 WHEN I type a name for "You" on Setup and start THE APP SHALL keep it as this device's
+  name; the hub asks no name first.
+- AC5.7 WHEN Cloudflare Access sends a member back (`/cdn-cgi/access/authorized`) THE APP SHALL
+  leave that request to the network (never its service worker's cache), so the sign-in completes.
 
 ### Changed
 
-- The moves have motion (DESIGN.md's "one memorable element"): a match's first cards, tiles or
-  answers are dealt in one after another; a card you draw or get slides into your hand; a Ludo
-  token slides from its last square, and a captured one flies back to its base; the die rolls;
-  a Memory pair glows as it leaves; a new Go Fish book pops; the winning Four in a Row line shines.
-- `index.json` gains `how`: each game's how-to-play steps.
-- A view's `ctx` gains `first`: true on a match's first draw, so a view forgets the last match.
+- AC5.1: the hub's panel is **Play with friends**: a room-code field with **Join** for anyone, and
+  a **Sign in to invite friends** link (signed out) or **Invite friends** on each game (a member,
+  who types their name there). **Online scores** leaves the hub (it stays after an online match).
+  The separate Join screen is gone.
+- AC3.2: **Download all for offline** moves into Settings.
+- The moves have motion: the deal, a card into your hand, a Ludo token sliding from its last square
+  (a captured one flies back to base), the die rolling, a Memory pair leaving, a Go Fish book, the
+  winning Four in a Row line. Screens fade in. Ludo's die says whose roll it is, ringed in that
+  player's colour.
+- Sounds per game, made in the browser: a die rattle, a capture, a token home, a card, a disc. A
+  view may name one with `sound(move, note)`.
+- A new logo (a card and a die on felt, no text), in the top bar and as the app's icons.
+- `index.json` gains `how`; a view's `ctx` gains `first` (true on a match's first draw).
 
 ### Removed
 
-- None.
+- The first-visit "Welcome! What should we call you?" form.
 
 ## Alternatives considered
 
-- **A how-to-play dialog over the first match:** it fights the pass screen and the CPU's first
-  move. A card on Setup is read before Start, and stays one tap away.
-- **Remember "seen" in the store:** a new field in `games.v1`. "No finished match of this game"
-  says the same with the data already kept.
-- **An animation library, or moving elements between draws (FLIP):** more code and weight. Each
-  draw makes new elements, so a CSS keyframe from the old place (`--dx`, `--dy`) is enough.
+- **A how-to-play dialog over the first match:** it fights the pass screen. A card on Setup is
+  read before Start and stays one tap away.
+- **A list of open rooms on the hub:** a request per visitor and strangers in family rooms. A
+  code or a link stays private and costs nothing.
+- **Sound files:** downloads. Short tones from Web Audio cost nothing.
 
 ## UI
 
-- **Setup:** a felt **How to play** card under the game's one-line about.
-- **Match:** the banner (a paper pill at the top of the board, about 1.4 s, never in the way of a
-  tap); the CPU's chip dots; the deal and the move animations above. The result banner sits in
-  the middle of the board for 1.5 s, then the Result screen, whose heading pops in on a win.
-- **States:** with `prefers-reduced-motion`, nothing moves: the banner shows and goes, the dots
-  stand still. The banner is hidden from screen readers: the turn line and the live region already
-  say the same.
+- **Hub:** logo and "Games" in the bar; "Pick a game"; the felt **Play with friends** panel (code
+  field, **Join**, the sign-in or Admin link); the games; scores and install.
+- **Setup:** a felt **How to play** card. **Invite friends:** "Your name", seats, CPU seats, level.
+- **Match:** the turn banner (about 1.4 s, taps go through it), the CPU's dots, the motion, and the
+  result banner (1.5 s). With `prefers-reduced-motion`, nothing moves. Banners are hidden from
+  screen readers: the turn line and the live region say the same.
 
 ## Design
 
-- All in `site/lib/app.js` (`banner()`, the chip's `thinking` class, the deal after the first
-  render), `site/lib/app.css` (keyframes) and the views' own small memory of the last draw (Ludo's
-  token places and die, Memory's faces, the hand in Crazy Eights and Go Fish). No rules, engine,
-  message, store or server change. Online play gets the same screens.
-- Size: about 2 KB more CSS and JS in the shell; Crazy Eights and Ludo grow by 1 KB each.
+- `site/sw.js`: `/cdn-cgi/` joins `/member` and `/admin` as network only.
+- All else is `site/lib/app.js`, `online.js`, `ui.js` (tones), `app.css` (keyframes), the views'
+  small memory of their last draw, `index.json` and `site/icons/`. No rules, engine, message,
+  store or server change; fewer screens, no new request.
 
 ## Rollout and rollback
 
-- Ships with the release; nothing is stored. A rollback restores the previous version.
+- Ships with the release; nothing is stored. A rollback restores the previous version, and with it
+  the sign-in bug.
 
 ## Docs and clean-up
 
-- `docs/spec.md` (AC1.6–AC1.8, AC4.5, `ctx.first`, `index.json`'s `how`), `DESIGN.md` (motion and
-  states), `CHANGELOG.md`. Ludo's unused `left`/`top` transition is removed (a token is drawn
-  new each time, so it never ran).
+- `docs/spec.md`, `DESIGN.md`, `README.md`, `CHANGELOG.md`. Removed: the welcome form, the Join
+  screen, Ludo's unused `left`/`top` transition.
 
 ## Tasks
 
-- [x] T1 [US1] The turn banner, the CPU's dots and the win banner — files: `site/lib/app.js`,
-  `site/lib/app.css` — verifies: AC1.6, AC1.7, AC1.8
-- [x] T2 [US4] How to play on Setup — files: `site/lib/app.js`, `site/games/index.json` —
-  verifies: AC4.5
-- [x] T3 [US1] Deal and capture motion — files: `site/lib/app.css`, `site/games/*/view.js` —
-  verifies: the Changed list
+- [x] T1 [US1] Turn banner, CPU dots, result banner, motion and sounds — files: `site/lib/`,
+  `site/games/*/view.js` — verifies: AC1.6, AC1.7, AC1.8
+- [x] T2 [US4] How to play and the Setup name — files: `site/lib/app.js`, `site/games/index.json` —
+  verifies: AC4.5, AC4.6
+- [x] T3 [US5] Sign-in through the service worker; the simpler panel — files: `site/sw.js`,
+  `site/lib/app.js`, `site/lib/online.js` — verifies: AC5.1, AC5.7
+- [x] T4 [US3] Download all in Settings; the logo — files: `site/lib/app.js`, `site/icons/`,
+  `site/index.html` — verifies: AC3.2
 
 ## Verification
 
-- `make verify` passes (`tests/e2e/games.spec.ts` checks the card, the banner and the CPU's dots;
-  `tests/unit/games.test.ts` the `how` steps). `docs/spec.md` is updated to match this change.
+- `make verify` passes (`games.spec.ts`, `online.spec.ts`, `sw.test.ts`, `games.test.ts`).
+  `docs/spec.md` is updated to match this change. After the deploy, the owner signs in at
+  `/member` once: the hub shows **Invite friends** on each game.

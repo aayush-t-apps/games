@@ -12,12 +12,24 @@ Versions: [Semantic Versioning](https://semver.org/). Change docs: `docs/changes
 - Games that feel alive (docs/changes/0005-games-feel-alive.md): a banner says whose turn it is; a
   CPU shows thinking dots; a **How to play** card on Setup, open on a game's first play; the result
   shows over the board, with confetti for a win, before the Result screen.
+- A logo: a card and a red die on felt, in the bar and as the app's icons.
+- Sounds per game: a die rattle, a capture, a token home, a card, a disc. Ludo's die says whose
+  roll it is, in that player's colour.
 
 ### Changed
 
+- A simpler hub: no name question first; **Play with friends** has a room-code field and **Join**
+  right there, **Sign in to invite friends** for members, and **Invite friends** on each game
+  (it asks the member's name). **Online scores** and the separate Join screen are gone from the
+  hub; **Download all for offline** is in Settings. The name typed on Setup is kept.
 - More motion on the table: the deal, a card into your hand, a Ludo token sliding to its square
   and a captured one back to base, the die rolling, a Memory pair leaving, a Go Fish book, the
-  winning Four in a Row line. Off with the device's reduced-motion setting.
+  winning Four in a Row line; screens fade in. Off with the device's reduced-motion setting.
+
+### Fixed
+
+- Members couldn't sign in: the service worker answered Cloudflare Access's return page
+  (`/cdn-cgi/access/authorized`) from its cache, so the sign-in never finished.
 
 ## [0.3.0] - 2026-10-30
 

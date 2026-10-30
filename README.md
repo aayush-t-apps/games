@@ -10,17 +10,19 @@ Open **https://games.app.a69x.in**.
 
 ## Play online
 
-1. A member taps **Play online** on a game, picks the seats (CPU seats too) and taps **Start the
+1. A member (signed in with **Sign in to invite friends** on the games page) taps **Invite
+   friends** on a game, types their name, picks the seats (CPU seats too) and taps **Start the
    room**.
 2. Share the room: show its QR code, read out its 6-letter code, or tap **Share** (or **Copy
-   link**). Friends open the link, or tap **Join a room** and type the code, then type a nickname.
+   link**). Friends open the link, or type the code under **Play with friends** on the games page
+   and tap **Join**, then type a nickname.
    A TV or a big screen can tap **Join as Table** to show the board to everyone.
 3. The room's owner taps **Start**. The owner's device runs the match. If it drops, the next
    device takes over; any player can tap **Make me host** (a laptop on Wi-Fi is steadier than a
    phone). A device that drops reconnects by itself, and a player away for 60 s on their turn is
    played by the CPU until they're back.
-4. At the end, everyone sees the places, the owner can tap **Rematch**, and **Online scores**
-   shows each game's top players and last 20 matches.
+4. At the end, everyone sees the places, the owner can tap **Rematch**, and **Scores** shows each
+   game's top players and last 20 online matches.
 5. **Leave the room** opens your seat for someone else. When the owner leaves, the next player
    gets the owner's controls. When the owner's phone only drops or sleeps, the controls wait 2
    minutes for it, then pass on; meanwhile any player can tap **Make me the owner**.
@@ -42,8 +44,8 @@ why are in `docs/adr/0001-members-sign-in-with-access.md`, Setup. To do it again
    tag** into `wrangler.jsonc` (`ACCESS_TEAM`, `ACCESS_AUD`). They aren't secret.
 4. GitHub: **games → Settings → Secrets and variables → Actions → New repository secret**:
    `ADMIN_EMAIL`, the email you sign in with. The next deploy takes it.
-5. Check: open `/member` and sign in: the hub shows **Play online**, and `/admin` opens. In a
-   private window, `/` shows no sign-in.
+5. Check: open `/member` and sign in: the hub shows **Invite friends** on each game, and `/admin`
+   opens. In a private window, `/` shows no sign-in.
 
 **Add or remove a member:** edit the policy's emails in Cloudflare (about a minute). The **Members**
 link on `/admin` opens the dashboard.
@@ -75,8 +77,8 @@ yourself for longer. Restore runs only on Cloudflare, not on `make dev`.
 | Mac (Safari 17 or later) | **File → Add to Dock** |
 | Firefox, TV browsers | Play in the browser: everything works, with no install |
 
-To play with no signal, open the app once online and tap **Download all for offline** (or open
-each game once). On iPhone and iPad, install it to the Home Screen: Safari can clear the scores of
+To play with no signal, open the app once online and tap **Settings → Download all for offline**
+(or open each game once). On iPhone and iPad, install it to the Home Screen: Safari can clear the scores of
 a site that isn't installed after 7 days unused.
 
 ## How it's built
