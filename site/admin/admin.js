@@ -56,17 +56,21 @@ function frame(...body) {
     el("h1", {}, "Admin"),
     el(
       "div",
-      { class: "tabs", role: "tablist", "aria-label": "Admin" },
-      TABS.map((name) =>
-        el(
-          "button",
-          {
-            type: "button",
-            role: "tab",
-            "aria-selected": name === tab ? "true" : "false",
-            onclick: () => open(name),
-          },
-          name,
+      { class: "row tabs" },
+      el(
+        "div",
+        { class: "row", role: "tablist", "aria-label": "Admin" },
+        TABS.map((name) =>
+          el(
+            "button",
+            {
+              type: "button",
+              role: "tab",
+              "aria-selected": name === tab ? "true" : "false",
+              onclick: () => open(name),
+            },
+            name,
+          ),
         ),
       ),
       el("a", { class: "button", href: MEMBERS, target: "_blank", rel: "noopener" }, "Members"),

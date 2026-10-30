@@ -1,7 +1,17 @@
 // Online rooms end to end (change 0002, 0003): a desktop and a phone play Four in a Row through a
 // room, and the score shows. Locally Access isn't set up, so the desktop is the developer member
 // (ADR 0001); the phone joins by the room's link as a guest, with no sign-in.
+import AxeBuilder from "@axe-core/playwright";
 import { devices, expect, type Page, test } from "@playwright/test";
+
+/** No serious accessibility problem on this screen (the same bar as smoke.spec.ts). */
+async function accessible(page: Page) {
+  const results = await new AxeBuilder({ page }).analyze();
+  const serious = results.violations.filter((v) =>
+    ["serious", "critical"].includes(v.impact ?? ""),
+  );
+  expect(serious.map((v) => `${v.id}: ${v.nodes[0]?.target}`)).toEqual([]);
+}
 
 const column = (page: Page, n: number) =>
   page.getByRole("button", { name: new RegExp(`^Column ${n},`) });
@@ -39,16 +49,20 @@ test("a desktop and a phone play Four in a Row online, and the score shows (AC5.
 
   // The guest opens the link, types a nickname once, and gets the free seat.
   await phone.goto(`/r/${code}`);
+  await expect(phone.getByLabel("Your nickname (1 to 16 letters)")).toBeVisible();
+  await accessible(phone);
   await phone.getByLabel("Your nickname (1 to 16 letters)").fill("Sam");
   await phone.getByRole("button", { name: "Join", exact: true }).click();
   await expect(phone.getByText("Waiting for Ana to start.")).toBeVisible();
   await expect(desk.locator(".seats")).toContainText("Sam");
+  await accessible(desk);
 
   // Only the owner has the controls; the desktop hosts the match.
   await expect(phone.getByRole("button", { name: "Start" })).toHaveCount(0);
   await desk.getByRole("button", { name: "Start", exact: true }).click();
   await expect(turn(desk)).toHaveText("Your turn");
   await expect(turn(phone)).toHaveText("Ana's turn");
+  await accessible(phone);
 
   // Ana drops in column 4, Sam in column 1: four in a column wins for Ana.
   for (let i = 0; i < 4; i++) {
@@ -103,8 +117,10 @@ test("the admin page opens on the Overview, with its four tabs (AC8.1)", async (
     "true",
   );
   await expect(page.getByRole("heading", { name: "Today" })).toBeVisible();
+  await accessible(page);
   await page.getByRole("tab", { name: "Games" }).click();
   await expect(page.getByRole("button", { name: "Move Ludo up" })).toBeVisible();
+  await accessible(page);
   await page.getByRole("tab", { name: "Scores" }).click();
   await expect(page.getByRole("link", { name: "Export" })).toBeVisible();
 });
