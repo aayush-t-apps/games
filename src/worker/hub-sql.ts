@@ -136,7 +136,8 @@ export function scores(sql: Sql, game: string) {
   return { game, top, recent };
 }
 
-/** Everything the admin's Overview shows (AC8.1), from two queries: no stats table. */
+/** Everything the admin's Overview shows (AC8.1), in one response: two queries over `matches`
+ * (no stats table), the live rooms and the switches. */
 export function stats(sql: Sql, now: number) {
   const today = now - (now % DAY);
   const games = sql(
@@ -171,6 +172,8 @@ export function stats(sql: Sql, now: number) {
     games,
     /** Per game, when it was last played online, at any time. */
     last,
+    /** The switches, so the Overview shows which games are on. */
+    catalog: catalog(sql),
   };
 }
 
