@@ -87,7 +87,9 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname === "/api/catalog") return event.respondWith(catalog(request));
   if (url.pathname === "/health" || url.pathname === "/sw.js" || /^\/(\.well-known|api)\//.test(url.pathname))
     return;
-  if (/^\/(member|admin)(\/|$)/.test(url.pathname)) return;
+  // Sign-in pages, and Cloudflare's own paths: Access's return (/cdn-cgi/access/authorized) must
+  // reach Cloudflare, which sets the sign-in cookie there. From the cache it would never sign in.
+  if (/^\/(member|admin|cdn-cgi)(\/|$)/.test(url.pathname)) return;
   event.respondWith(answer(request, url));
 });
 
