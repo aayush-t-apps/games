@@ -13,7 +13,15 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       exclude: ["src/worker/index.ts", "src/shared/health.ts"],
-      include: ["src/worker/**/*.ts", "src/shared/**/*.ts", "src/web/lib/**/*.ts"],
+      include: [
+        "src/worker/**/*.ts",
+        "src/shared/**/*.ts",
+        "src/web/lib/**/*.ts",
+        // The game logic: pure modules with no DOM. The screens are covered by tests/e2e.
+        "site/lib/{rng,deck,board,engine,store}.js",
+        "site/lib/net/*.js",
+        "site/games/*/rules.js",
+      ],
       thresholds: { lines: 80, branches: 80, functions: 80, statements: 80 },
     },
   },

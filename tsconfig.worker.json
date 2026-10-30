@@ -10,7 +10,9 @@
     "noEmit": true,
     "isolatedModules": true,
     "types": ["@cloudflare/workers-types"],
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "checkJs": false
   },
   "include": [
     "src/worker",
