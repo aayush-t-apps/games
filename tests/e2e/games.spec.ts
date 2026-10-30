@@ -1,5 +1,4 @@
 // The games end to end, on desktop and phone (plan task T6).
-import { readFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
 
 const GAMES = ["Crazy Eights", "Go Fish", "Memory", "Ludo", "Four in a Row", "Quiz Race"];
@@ -143,7 +142,7 @@ test("kid mode highlights moves, gives a hint and takes a move back (AC4.1)", as
   await expect(page.getByRole("button", { name: "Undo" })).toBeDisabled();
 });
 
-test("exports the data and imports it again, refusing a file that isn't a save (AC4.3)", async ({
+test("Settings changes the name, kept on this device, with no Export or Import", async ({
   page,
 }) => {
   await open(page);
@@ -151,25 +150,11 @@ test("exports the data and imports it again, refusing a file that isn't a save (
   const nick = page.getByLabel("Your name");
   await nick.fill("Ana");
   await nick.press("Tab");
-  const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export my data" }).click();
-  const file = await (await download).path();
-  const saved = JSON.parse(readFileSync(file, "utf8"));
-  expect(saved).toMatchObject({ format: "games.v1", player: { nick: "Ana" } });
-
-  await nick.fill("Bo");
-  await nick.press("Tab");
-  const input = page.getByLabel("Import a save file");
-  await input.setInputFiles({
-    name: "notes.json",
-    mimeType: "application/json",
-    buffer: Buffer.from("hello"),
-  });
-  await expect(page.locator("#import-status")).toHaveText("This file isn't a Games save.");
-  await input.setInputFiles(file);
-  await expect(page.locator("#import-status")).toHaveText("Save loaded.");
-  await expect(nick).toHaveValue("Ana");
+  await expect(page.getByRole("button", { name: /Export/ })).toHaveCount(0);
+  await expect(page.getByLabel(/Import/)).toHaveCount(0);
   await page.getByRole("button", { name: "Done" }).click();
+  await expect(page.getByRole("heading", { name: "Pick a game, Ana" })).toBeVisible();
+  await page.reload();
   await expect(page.getByRole("heading", { name: "Pick a game, Ana" })).toBeVisible();
 });
 

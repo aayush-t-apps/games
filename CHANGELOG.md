@@ -23,6 +23,10 @@ Versions: [Semantic Versioning](https://semver.org/). Change docs: `docs/changes
 - A request to `localhost` is always the developer, so `make dev` and the tests work with the
   Access values set.
 
+### Removed
+
+- **Export my data** and **Import a save file** in Settings: a device's own scores stay on it.
+
 ### Fixed
 
 - The online match bar showed the word "null".

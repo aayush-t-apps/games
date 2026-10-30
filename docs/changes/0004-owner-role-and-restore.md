@@ -46,7 +46,8 @@ admin page also needed a cleaner layout on a phone and a desktop.
 
 ### Removed
 
-- None.
+- AC4.3, the player's **Export my data** and **Import a save file** in Settings: nobody needs to
+  move a device's own scores (owner, 2026-10-30). The admin's **Export** (AC8.4) stays.
 
 ## Alternatives considered
 
@@ -55,8 +56,6 @@ admin page also needed a cleaner layout on a phone and a desktop.
   elsewhere.
 - **Pass the owner role at once on a drop:** a phone that sleeps for a moment would lose it. Two
   minutes rides out a short drop.
-- **Count players by polling each room** from the admin page: one call per room per open. The room
-  tells the Hub only when the count changes.
 
 ## UI
 

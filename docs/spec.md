@@ -17,7 +17,8 @@ with a nickname, from any device, and the online scores are shared. The owner ru
 ## Out of scope
 
 Accounts of our own (members are an Access list), chat, real-time games and the P2P transport,
-gamepads, sync of a device's own scores (Export and Import move data instead), commercial game
+gamepads, moving a device's own scores to another device (they stay where they were played),
+commercial game
 names or art, third-party art, a WebAssembly engine, a neutral server referee (the host device runs
 the rules), counting solo play on the server.
 
@@ -62,9 +63,6 @@ the rules), counting solo play on the server.
     easy level.
   - AC4.2 WHEN a match ends THE APP SHALL add it to that browser's scores (played, won, per game and
     level, and the last 20 results) and show them on the hub, with no network request.
-  - AC4.3 WHEN I tap Export THE APP SHALL save one JSON file with my nickname, settings and scores;
-    WHEN I import that file on another device THE APP SHALL load it, and refuse a file that isn't
-    one, with the reason, changing nothing.
   - AC4.4 WHEN the app starts THE APP SHALL ask for persistent storage (`navigator.storage.persist`).
 - **US5 (P1): Start an online room (members)**. As a member, I want to start a room and share it,
   so that people on other devices play with me.
@@ -145,7 +143,7 @@ Design brief (`DESIGN.md`), in short:
 - **The one memorable element:** big, crisp cards and pieces that move with a short slide.
 - **Screens (one primary action each):** Hub (the game list; **Play**), Setup (seats, CPU level,
   kid mode; **Start**), Match (the board; play a move), Result (places; **Play again**), Settings
-  (nickname, kid mode, theme, sound, Export and Import, Install).
+  (nickname, kid mode, theme, sound, Install).
 - **Online screens** (`site/lib/online.js`): the hub's online panel (felt: **Join a room**,
   **Online scores**, **Members: sign in** or **Play online** on each game for a member, **Admin**
   for the owner), Start a room (seats, CPU seats, level; **Start the room**), Join (code or
@@ -246,7 +244,7 @@ move or the room says it's back (AC6.6).
   and tracks), `cards.js` (SVG cards and pieces, drawn by code).
 - `ui.js` (hint, undo, kid mode, pass screen, live region, sound as short Web Audio tones,
   vibration where the browser has it), `input.js` (pointer and keyboard to actions), `layout.js`
-  and `app.css`, `store.js` (`localStorage`, Export, Import), `install.js` (install button, iOS
+  and `app.css`, `store.js` (`localStorage`), `install.js` (install button, iOS
   card, update prompt).
 
 The import rule, checked by a unit test: `rules.js` imports only `site/lib/{rng,deck,board}.js`;
@@ -340,8 +338,8 @@ Only in the browser, in `localStorage` key `games.v1`: `{player: {id, nick, name
 theme, sound}, scores: {<game>: {<level>: {played, won}}}, recent: [last 20 {game, level, won,
 place, at}]}`, about 5 KB. `named` is false until the first-visit name is saved or skipped. The
 level is `easy`, `normal`, `hard`, or `friends` for a match with no CPU. Scores are seat 1's (the
-device's player); a win is first place alone. Export and Import use the same shape with a
-`format: "games.v1"` field; an import keeps only the known fields. A local match in progress isn't
+device's player); a win is first place alone. What is read back is checked: data of another
+shape starts blank, and only the known fields are kept. A local match in progress isn't
 kept: closing the tab ends it. Online matches aren't in these scores: the Hub keeps them.
 
 On the server, only for online play: the Hub's tables and each live room's `meta` and `snap`
@@ -365,7 +363,7 @@ times in 100. The card games and Ludo use simple rules that get smarter by level
   console; scores aren't changed.
 - `localStorage` is full or blocked (private mode): play works, and Settings says scores can't be
   kept. iPhone Safari may clear a non-installed site's data after 7 days unused: the iOS card says
-  to install, or to Export.
+  to install it.
 - Online: a deploy closes every socket; devices reconnect and the host goes on from `snap`. A free
   limit hit: the calls fail until 00:00 UTC and the screens say online play needs signal or is
   busy. The Hub failing to record a match doesn't stop the result on the devices.
@@ -387,7 +385,7 @@ times in 100. The card games and Ludo use simple rules that get smarter by level
 - `docs/spec.md`: the game interface, the engine and transport seam, the import rule, offline and
   the data shape. `AGENTS.md`: how to add a game (`games: add <name>`: a folder, an `index.json`
   line, the shared tests pass) and to keep `sw.js`'s version in step.
-- `README.md`: what it is, how to install on each platform, Export and Import, online play and its
+- `README.md`: what it is, how to install on each platform, online play and its
   one-time setup (ADR 0001), adding a member, `/admin`.
 - `AGENTS.md`: the two Durable Objects (classes only add), never log the Access token or email.
 - The preset's starter page and its e2e test are replaced.

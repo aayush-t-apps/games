@@ -789,7 +789,6 @@ function finish(m, places) {
 
 function openSettings() {
   const data = store.get();
-  const status = el("p", { role: "status", id: "import-status" });
   const dialog = el(
     "dialog",
     { class: "sheet", "aria-labelledby": "settings-title" },
@@ -842,11 +841,6 @@ function openSettings() {
         }),
         "Sounds",
       ),
-      el("h3", {}, "Move your scores to another device"),
-      el("div", { class: "row" }, el("button", { type: "button", id: "export", onclick: exportData }, "Export my data")),
-      el("label", { for: "import" }, "Import a save file"),
-      el("input", { type: "file", id: "import", accept: ".json,application/json", onchange: (e) => importData(e.target, status) }),
-      status,
       store.kept ? null : el("p", { class: "warn" }, "This browser isn't keeping data (private mode?), so your scores won't be kept."),
       install ? el("button", { type: "button", onclick: () => install?.() }, "Install Games") : null,
       el("div", { class: "row" }, el("button", { class: "primary", value: "done" }, "Done")),
@@ -858,28 +852,6 @@ function openSettings() {
   });
   document.body.append(dialog);
   dialog.showModal();
-}
-
-function exportData() {
-  const blob = new Blob([store.exportText()], { type: "application/json" });
-  const link = el("a", { href: URL.createObjectURL(blob), download: "games-save.json" });
-  document.body.append(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-}
-
-async function importData(input, status) {
-  const file = input.files?.[0];
-  if (!file) return;
-  const why = file.size > 100_000 ? "This file is too big to be a Games save." : store.importText(await file.text());
-  status.textContent = why ?? "Save loaded.";
-  status.className = why ? "warn" : "";
-  input.value = "";
-  if (!why) {
-    applySettings();
-    document.getElementById("nick").value = store.get().player.nick;
-  }
 }
 
 // ---------- Start ----------

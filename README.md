@@ -79,12 +79,6 @@ To play with no signal, open the app once online and tap **Download all for offl
 each game once). On iPhone and iPad, install it to the Home Screen: Safari can clear the scores of
 a site that isn't installed after 7 days unused.
 
-## Move your scores: Export and Import
-
-Each browser keeps its own name, settings and scores. To move them, open **Settings** and tap
-**Export my data**: this saves `games-save.json`. On the other device, open **Settings**, **Import
-a save file**, and pick that file. A file that isn't a Games save is refused, and nothing changes.
-
 ## How it's built
 
 `docs/spec.md` (what it does and how), `DESIGN.md` (how it looks), `AGENTS.md` (how to change it

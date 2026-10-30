@@ -13,7 +13,7 @@ a laptop, or a TV browser. The one job: pick a game and be playing in two taps, 
 | Setup: seats (you, people, CPUs), CPU level, kid mode | **Start** |
 | Match: the felt table, the players, the moves | play a move |
 | Result: the places | **Play again** |
-| Settings (a bottom sheet on phones): name, kid mode, theme, sound, Export, Import, Install | **Done** |
+| Settings (a bottom sheet on phones): name, kid mode, theme, sound, Install | **Done** |
 | Start a room (members): seats, CPU seats, level | **Start the room** |
 | Join: the room code, or a nickname for a room's link | **Join** (or **Join as Table**) |
 | Lobby (`/r/<code>`): an Invite panel (the code large, its QR code, the link) and a Seats panel (a row per seat, with owner, host and you tags) | **Start** (the owner), **Share** (everyone) |
