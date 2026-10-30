@@ -97,9 +97,10 @@ function winner(s) {
   return over(s) ? { places: placesBy(s.books.map((b) => b.length)) } : null;
 }
 
+// With no seat (`null`), the public view: no hand, for spectators and a table.
 function view(s, seat) {
   return {
-    hand: sortHand(s.hands[seat]),
+    hand: seat === null ? [] : sortHand(s.hands[seat]),
     counts: s.hands.map((h) => h.length),
     books: s.books,
     stock: s.stock.length,

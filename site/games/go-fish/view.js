@@ -58,7 +58,7 @@ export default {
       el("span", { class: "card-slot", html: stock ? cardBack() : "" }),
       el("span", { class: "label" }, `Pond: ${stock}`),
     );
-    const myBooks = books[ctx.me];
+    const myBooks = books[ctx.me] ?? [];
     const fan = el(
       "div",
       { class: "hand", role: "group", "aria-label": "Your cards" },
@@ -74,14 +74,18 @@ export default {
         }),
       ),
     );
-    box.replaceChildren(
-      el("div", { class: "table" }, pond, asks),
-      el(
-        "p",
-        { class: "books" },
-        myBooks.length ? `Your books: ${myBooks.map((r) => plural(r)).join(", ")}` : "No books yet. Collect four of a rank.",
-      ),
-      fan,
-    );
+    // A spectator or a table (no seat) sees the table only.
+    const mine =
+      ctx.me === null
+        ? []
+        : [
+            el(
+              "p",
+              { class: "books" },
+              myBooks.length ? `Your books: ${myBooks.map((r) => plural(r)).join(", ")}` : "No books yet. Collect four of a rank.",
+            ),
+            fan,
+          ];
+    box.replaceChildren(el("div", { class: "table" }, pond, ctx.me === null ? null : asks), ...mine);
   },
 };
