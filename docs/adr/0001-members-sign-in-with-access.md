@@ -44,6 +44,8 @@ whose email equals `ADMIN_EMAIL`. Because the repo is public, `ADMIN_EMAIL` is a
 - A member is removed: they can't start rooms once their Access session ends; rooms they started
   run to their end, and the admin can close them.
 - `ADMIN_EMAIL` missing: `/api/admin/*` refuses everyone (403).
+- `/health` and `/.well-known/shipify.json` stay outside the Access app (only the four paths are
+  in it), so each deploy's health check still passes and doesn't roll back.
 
 ## Setup
 The owner does it once, after the build merges (about 10 minutes):
