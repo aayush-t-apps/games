@@ -68,16 +68,23 @@ the rules), counting solo play on the server.
   - AC4.4 WHEN the app starts THE APP SHALL ask for persistent storage (`navigator.storage.persist`).
 - **US5 (P1): Start an online room (members)**. As a member, I want to start a room and share it,
   so that people on other devices play with me.
-  - AC5.1 WHEN I am not signed in THE APP SHALL show **Sign in to play online** on the hub; WHEN
-    I sign in at `/member` (Access, an email code) THE APP SHALL bring me back to the hub with
-    **Play online** on each game that is on. A guest never sees a login.
+  - AC5.1 WHEN I am not signed in THE APP SHALL lead the hub's online panel with **Join a room**
+    and show **Members: sign in**; WHEN I sign in at `/member` (Access) THE APP SHALL bring me back
+    to the hub with **Play online** on each game that is on. A guest never sees a login.
   - AC5.2 WHEN I start a room (2–8 seats in the game's range, CPU seats and level) THE APP SHALL
     give a 6-letter code (31 letters, no look-alikes), the link `/r/<code>`, its QR code, and
     **Copy link** (or **Share**).
-  - AC5.3 WHEN I am the room owner THE APP SHALL let me start, kick, lock, unlock, set CPU seats,
-    rematch and close, and refuse these controls from any other device.
+  - AC5.3 WHEN my seat holds the owner role (seat 0 at first) THE APP SHALL let me start, kick,
+    lock, unlock, set CPU seats, rematch and close, and refuse these controls from any other seat.
   - AC5.4 WHEN a `/api/member/*` call has no valid Access token (signature, audience, issuer or
     expiry) THE APP SHALL refuse it with 401 and change nothing.
+  - AC5.5 WHEN the owner taps **Leave the room** THE APP SHALL open their seat and give the owner's
+    controls to the next online player; WHEN the owner's device only drops, THE APP SHALL keep the
+    role for 2 minutes, then pass it to the next online player, unless the device comes back first;
+    meanwhile any player MAY tap **Make me the owner**. A member who comes back to their room after
+    that gets their seat, not the role.
+  - AC5.6 WHEN any player taps **Leave the room** THE APP SHALL open the seat for someone else and
+    forget that tab's seat token.
 - **US6 (P1): Join and play as a guest**. As anyone with a link or code, I want to join with only
   a nickname, so that I play online without an account.
   - AC6.1 WHEN I open `/r/<code>`, scan its QR code or type the code THE APP SHALL show the game
@@ -115,6 +122,13 @@ the rules), counting solo play on the server.
   - AC8.4 WHEN I tap **Export** THE APP SHALL download all Hub data as one JSON file.
   - AC8.5 WHEN a signed-in member who isn't `ADMIN_EMAIL` calls `/api/admin/*` THE APP SHALL
     refuse it with 403.
+  - AC8.6 WHEN I open **Rooms** or the **Overview** THE APP SHALL show how many people sit in each
+    room (and in all), which each room reports to the Hub only when the count changes.
+  - AC8.7 WHEN I click a column head in an admin table THE APP SHALL sort the table by it; a second
+    click sorts it the other way.
+  - AC8.8 WHEN I pick a time in the last 30 days under **Scores → Restore** and confirm THE APP SHALL
+    put all Hub data back as it was then (Cloudflare's point-in-time recovery), and offer **Undo the
+    restore**, which puts it back as it was just before.
 - **US9 (P3): A big screen as the table**. As a family at a TV, I want a big screen to show the
   board while phones hold the hands, so that everyone watches one table.
   - AC9.1 WHEN I join a room as **Table** THE APP SHALL take no seat and show the public view large
@@ -132,17 +146,22 @@ Design brief (`DESIGN.md`), in short:
 - **Screens (one primary action each):** Hub (the game list; **Play**), Setup (seats, CPU level,
   kid mode; **Start**), Match (the board; play a move), Result (places; **Play again**), Settings
   (nickname, kid mode, theme, sound, Export and Import, Install).
-- **Online screens** (`site/lib/online.js`): the hub's online row (**Sign in to play online**,
-  **Join a room**, **Online scores**; **Play online** on each game for a member), Start a room
-  (seats, CPU seats, level; **Start the room**), Join (nickname; **Join**, or **Join as Table**),
-  Lobby (`/r/<code>`: the code, its QR code, the link, **Share** or **Copy link**, the seats; the
-  owner's **Start**, **Lock**, **Make it a CPU**, **Kick**, **Add a seat**, **Close the room**),
-  Match (as above, with a bar: the room, its host, **Make me host**, "Reconnecting…"; no Hint or
-  Undo online), Result (places; **Rematch** for the owner, **Scores**, **Back to the room**),
-  Online scores (per game: top players, last 20 matches).
-- **Admin** (`/admin`, `site/admin/`): tabs **Overview**, **Games** (on, featured, **Up** and
-  **Down**, **Save**, **Add a game**), **Rooms** (**Close**), **Scores** (**Export**), and a
-  **Members** link to the Access policy.
+- **Online screens** (`site/lib/online.js`): the hub's online panel (felt: **Join a room**,
+  **Online scores**, **Members: sign in** or **Play online** on each game for a member, **Admin**
+  for the owner), Start a room (seats, CPU seats, level; **Start the room**), Join (code or
+  nickname, each label above its field; **Join as Table** in its own panel), Lobby (`/r/<code>`:
+  an **Invite** panel with the code, QR code, link, **Share** or **Copy link**, and a **Seats**
+  panel with a row per seat and the tags owner, host, you; the owner sees Invite first and has
+  **Start**, **Lock**, **Make it a CPU**, **Kick**, **Add a seat**, **Close the room**; everyone
+  has **Leave the room**; an owner-away notice with **Make me the owner**), Match (as above, with
+  a bar: the room, its host, **Make me host**, "Reconnecting…"; no Hint or Undo online), Result
+  (places; **Rematch** for the owner, **Scores**, **Back to the room**), Online scores (per game,
+  two panels: top players, last 20 matches).
+- **Admin** (`/admin`, `site/admin/`): a header with "Signed in as …" and **Members** (the Access
+  policy); tabs on one line (arrow keys); **Overview** (fact cards, tables), **Games** (a list: On,
+  Featured, ↑ ↓, **Save**, **Add a game**), **Rooms** (players, **Close**), **Scores** (opens on
+  the most played game; **Export**, **Restore…**, **Undo the restore**). Tables scroll on a phone
+  and sort by column (`site/admin/sort.js`).
 - **States:** first visit (nickname, optional; "Player" by default), loading a game ("Getting
   Ludo…"), offline (a small "Offline" mark; games not yet cached say "Needs signal once"; the online
   row hides), "Update ready", an old browser ("Please update your browser to play"). Online: "This
@@ -255,7 +274,7 @@ checks each one in the cache before it says "All games ready offline" (AC3.2). T
 leaves `/api/*`, `/member` and `/admin` to the network, except `/api/catalog`: network first, the
 last one kept for offline, and a game the catalogue turns off loses its saved files (AC8.2).
 
-### Online play (changes 0002, 0003)
+### Online play (changes 0002, 0003, 0004)
 
 **Who.** Guests (anyone) play solo, join rooms and read the scores. Members start rooms: Cloudflare
 Access (one app on `/member`, `/admin`, `/api/member/*`, `/api/admin/*`; one policy of emails;
@@ -263,30 +282,36 @@ ADR 0001) signs them in, and the Worker checks the `Cf-Access-Jwt-Assertion` tok
 (`access.ts`: RS256 with the team's keys from `https://<ACCESS_TEAM>/cdn-cgi/access/certs`, cached
 an hour, fetched again for a new key at most once a minute; `aud` is `ACCESS_AUD`, `iss`, `exp`,
 `nbf`). The admin is the member whose email is `ADMIN_EMAIL` (a runtime secret; none set: nobody).
-With no `ACCESS_TEAM` or `ACCESS_AUD`, member and admin calls get 503 and the hub hides online
-play; only on `localhost` is the caller `dev@localhost`, member and admin (`make dev`, tests).
+`ACCESS_TEAM` and `ACCESS_AUD` are plain vars in `wrangler.jsonc` (public values). With either
+empty, member and admin calls get 503 and the hub hides online play. On `localhost` the caller is
+always `dev@localhost`, member and admin (`make dev`, tests): Access never sits in front of it.
 
 **Routes** (`src/worker/app.ts`, input checks in `checks.ts`): `GET /api/catalog` (the switches
 and whether online play is set up; 60 s at the edge), `GET /api/scores?game=`, `GET
 /api/rooms/:code` (404 "This room has ended"), `GET /api/rooms/:code/ws` (the room's WebSocket),
 `GET /api/member/me`, `POST /api/member/rooms` (`{game, version, seats, cpu, level}` →
 `{code, ownerToken}`), `GET /api/admin/stats`, `GET` and `PUT /api/admin/catalog`, `GET
-/api/admin/rooms`, `DELETE /api/admin/rooms/:code`, `GET /api/admin/export`. Bodies are JSON up to
+/api/admin/rooms`, `DELETE /api/admin/rooms/:code`, `GET /api/admin/export`, `POST
+/api/admin/restore` (`{at}` within 30 days, or `{bookmark}` → `{undo}`). Bodies are JSON up to
 2 KB; a write and the WebSocket need `Origin` equal to the app's own. Codes are 6 characters from
 `ABCDEFGHJKMNPQRSTUVWXYZ23456789`.
 
 **Room DO** (`src/worker/objects/room.ts`, its rules in `room-logic.ts`), one per code:
 storage `meta` (game and version, the member, the owner token's hash, seats `{nick, cpu, token
-hash}`, host seat, locked, started, ended, match count, expiry) and `snap` (the host's last
-`state`: one write per move). Sockets hibernate; each keeps `{seat, table}` (seat `null`: a
-spectator); `ping` gets `pong` without waking the room. It checks only the envelope: protocol
-`v: 1`, the type for the sender, 4 KB a message (32 KB for `state`), 20 a second; and caps of 8
-seats, 8 spectators, 24 sockets. One alarm ends the room 6 hours after it starts, or 10 minutes
-after its last device leaves: it says `closed`, unlists itself from the Hub and deletes its storage.
+hash}`, host seat, `ownerSeat`, `ownerAway`, the people count last `reported`, locked, started,
+ended, match count, expiry) and `snap` (the host's last `state`: one write per move). Seat 0 is
+kept for the owner token until that device leaves or is kicked. Sockets hibernate; each keeps
+`{seat, table}` (seat `null`: a spectator); `ping` gets `pong` without waking the room. It checks
+only the envelope: protocol `v: 1`, the type for the sender, 4 KB a message (32 KB for `state`),
+20 a second; and caps of 8 seats, 8 spectators, 24 sockets. One alarm ends the room 6 hours after
+it starts, or 10 minutes after its last device leaves: it says `closed`, unlists itself from the
+Hub and deletes its storage. The same alarm rings 2 minutes after the owner's device dropped while
+others stayed, and passes the owner role to the next online player (AC5.5). When the count of
+people seated changes, the room tells the Hub (`seated`).
 
 **Messages** (JSON, `v: 1`). Device → room: `hello {nick, seatToken?, ownerToken?, table?}`,
-`move {seq, move}`, `take-host`, `owner {op: start | rematch | lock | unlock | kick | cpu | size |
-close}`. Host → room: `state {seq, turn, views, public, snapshot}`, `refused {seat, reason}`,
+`move {seq, move}`, `take-host`, `take-owner`, `leave`, `owner {op: start | rematch | lock |
+unlock | kick | cpu | size | close}`. Host → room: `state {seq, turn, views, public, snapshot}`, `refused {seat, reason}`,
 `end {places}`, `crash`. Room → device: `welcome {seat, seatToken?, owner, room}`, `seats {room}`,
 `start {match, seed, seats}` and `host {match, snapshot}` (to the host), `move {seat, seq, move}`
 (to the host), `view {data}` (a seat's own), `public {data}` (spectators), `refused {reason}`, `end
@@ -302,10 +327,12 @@ same. A device back after a drop says hello with its token and gets its seat and
 
 **Hub DO** (`src/worker/objects/hub.ts`, SQL in `hub-sql.ts`), one, `getByName("hub")`: tables
 `catalog (game, enabled, featured, sort)` (a game with no row is on), `rooms (code, game, member,
-started, expires)` and `matches (id, game, at, players, places, secs, seats, cpu, winner)`
+started, expires, players)` and `matches (id, game, at, players, places, secs, seats, cpu, winner)`
 (`winner`: the sole human winner's nickname, for the top players). Called when a room starts or
 ends, a list loads, or the admin acts; never per move. `stats()` is two queries over `matches`,
 the live rooms and the switches; the admin page adds each game's details from `index.json`.
+`restore` and `restart` are the admin's point-in-time recovery (30 days, AC8.8): the bookmark for
+a time, set for the next start, then `ctx.abort()`; it returns the bookmark of now, to undo it.
 
 ### Data
 
@@ -319,7 +346,8 @@ kept: closing the tab ends it. Online matches aren't in these scores: the Hub ke
 
 On the server, only for online play: the Hub's tables and each live room's `meta` and `snap`
 (above). Nicknames are what players type; no emails but the members' in `rooms` (shown only to the
-admin). **Export** on `/admin` downloads it all (`format: "games-hub.v1"`). Durable Object classes
+admin). **Export** on `/admin` downloads it all (`format: "games-hub.v1"`), and **Restore** puts it
+back as it was at any time in the last 30 days (Cloudflare keeps that history). Durable Object classes
 only add; Cloudflare refuses a rollback across them, so a bad release is fixed forward.
 
 `site/games/index.json` lists each game: `id, name, type, players, cpu, ages, teaching, version,

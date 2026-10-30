@@ -21,26 +21,29 @@ Open **https://games.app.a69x.in**.
    played by the CPU until they're back.
 4. At the end, everyone sees the places, the owner can tap **Rematch**, and **Online scores**
    shows each game's top players and last 20 matches.
+5. **Leave the room** opens your seat for someone else. When the owner leaves, the next player
+   gets the owner's controls. When the owner's phone only drops or sleeps, the controls wait 2
+   minutes for it, then pass on; meanwhile any player can tap **Make me the owner**.
 
 Rooms end by themselves 6 hours after they start, or 10 minutes after everyone leaves. Up to 8
 players and 8 watchers a room.
 
 ## Set up online play (once)
 
-Online play stays hidden until this is done (about 10 minutes). The full steps and why are in
-`docs/adr/0001-members-sign-in-with-access.md`, Setup:
+Done for `games.app.a69x.in` (team `rough-morning-dee7`, Google login, 0.3.0). The full steps and
+why are in `docs/adr/0001-members-sign-in-with-access.md`, Setup. To do it again:
 
 1. Cloudflare dashboard: **Zero Trust → Access → Applications → Add an application →
    Self-hosted**, name "Games members". Four destinations on `games.app.a69x.in`, paths `member`,
-   `admin`, `api/member/*` and `api/admin/*`. Session: 1 month.
-2. One policy: **Allow**, **Emails**: your email and each member's. Login method: **One-time PIN**.
+   `admin`, `api/member/*` and `api/admin/*`. Session: 1 month. Never add `/` or `/health`.
+2. A login method (Google, or **One-time PIN**) and one policy: **Allow**, **Emails**: your email
+   and each member's. Never **Everyone**.
 3. Copy the team domain (`<team>.cloudflareaccess.com`) and the application's **Audience (AUD)
-   tag**. Start a task `games: set the Access values <team domain> <AUD tag>`: a run puts them in
-   `wrangler.jsonc` (`ACCESS_TEAM`, `ACCESS_AUD`). They aren't secret.
+   tag** into `wrangler.jsonc` (`ACCESS_TEAM`, `ACCESS_AUD`). They aren't secret.
 4. GitHub: **games → Settings → Secrets and variables → Actions → New repository secret**:
-   `ADMIN_EMAIL`, your email. The next deploy takes it.
-5. Check: open `/member`, type your email and the code: the hub shows **Play online**, and
-   `/admin` opens. In a private window, `/` shows no sign-in.
+   `ADMIN_EMAIL`, the email you sign in with. The next deploy takes it.
+5. Check: open `/member` and sign in: the hub shows **Play online**, and `/admin` opens. In a
+   private window, `/` shows no sign-in.
 
 **Add or remove a member:** edit the policy's emails in Cloudflare (about a minute). The **Members**
 link on `/admin` opens the dashboard.
@@ -49,13 +52,18 @@ link on `/admin` opens the dashboard.
 
 `/admin` is for the owner only (the member whose email is `ADMIN_EMAIL`):
 
-- **Overview:** live rooms and who started them, matches today, and per game: matches in 7 and 30
-  days, average length and players, last played; hints on games to turn off or feature; the app's
-  size. **Refresh** loads it again.
+- **Overview:** live rooms, the people in them and who started them, matches today and in 30
+  days, and per game: matches in 7 and 30 days, average length and players, last played; hints on
+  games to turn off or feature; the app's size. **Refresh** loads it again.
 - **Games:** turn a game on or off, feature it, move it up or down, **Save** (the hub follows
   within about a minute; a game turned off keeps its scores). **Add a game** opens a task.
-- **Rooms:** live rooms, with **Close** (it ends on every device).
-- **Scores:** per game, and **Export**: all online data as one JSON file.
+- **Rooms:** live rooms and their players, with **Close** (it ends on every device).
+- **Scores:** per game (it opens on the most played one). Click a column head to sort any table.
+
+**Back up the online scores:** Cloudflare keeps 30 days of the Hub's history, with nothing to set
+up. **Scores → Restore** puts everything back as it was at a time you pick; **Undo the restore**
+puts it back as it was just before. **Export** downloads all online data as one JSON file, to keep
+yourself for longer. Restore runs only on Cloudflare, not on `make dev`.
 
 ## Install it
 
@@ -116,6 +124,7 @@ browser), then `deploy`, then `/health`, with a rollback if it fails. The Cloudf
 | `ADMIN_EMAIL` | secret (runtime) | the same place: the owner's email, for `/admin` (secret only to keep it private) |
 
 `pnpm ship publish` sets the first three; you add `ADMIN_EMAIL` (Set up online play, step 4).
+`ACCESS_TEAM` and `ACCESS_AUD` are plain values in `wrangler.jsonc`.
 
 ## Roll back, pause, resume
 
