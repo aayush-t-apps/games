@@ -61,5 +61,8 @@ export function placesBy(scores, higherWins = true) {
   return places;
 }
 
-/** A deep copy of a plain state (the rules never change the state they are given). */
-export const copy = (state) => structuredClone(state);
+/**
+ * A deep copy of a state (the rules never change the state they are given). States are plain JSON,
+ * so they can go over a network as they are; JSON is also faster here than structuredClone.
+ */
+export const copy = (state) => JSON.parse(JSON.stringify(state));

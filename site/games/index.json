@@ -1,0 +1,74 @@
+[
+  {
+    "id": "crazy-eights",
+    "name": "Crazy Eights",
+    "type": "cards",
+    "players": [2, 6],
+    "cpu": true,
+    "ages": "6+",
+    "teaching": true,
+    "version": 1,
+    "kb": 0,
+    "about": "Match the suit or the rank. An 8 changes the suit. Be first out of cards."
+  },
+  {
+    "id": "go-fish",
+    "name": "Go Fish",
+    "type": "cards",
+    "players": [2, 6],
+    "cpu": true,
+    "ages": "4+",
+    "teaching": true,
+    "version": 1,
+    "kb": 0,
+    "about": "Ask for a rank you hold. Collect books of four. Most books wins."
+  },
+  {
+    "id": "memory",
+    "name": "Memory",
+    "type": "kids",
+    "players": [1, 4],
+    "cpu": true,
+    "ages": "3+",
+    "teaching": true,
+    "version": 1,
+    "kb": 0,
+    "about": "Turn two cards. Find a pair and play again. Most pairs wins."
+  },
+  {
+    "id": "ludo",
+    "name": "Ludo",
+    "type": "board",
+    "players": [2, 4],
+    "cpu": true,
+    "ages": "5+",
+    "teaching": true,
+    "version": 1,
+    "kb": 0,
+    "about": "Roll a 6 to come out. Race your four tokens home and send others back."
+  },
+  {
+    "id": "four-in-a-row",
+    "name": "Four in a Row",
+    "type": "board",
+    "players": [2, 2],
+    "cpu": true,
+    "ages": "5+",
+    "teaching": true,
+    "version": 1,
+    "kb": 0,
+    "about": "Drop discs in turn. Make a line of four across, up or on a slant."
+  },
+  {
+    "id": "quiz-race",
+    "name": "Quiz Race",
+    "type": "kids",
+    "players": [1, 4],
+    "cpu": true,
+    "ages": "5+",
+    "teaching": true,
+    "version": 1,
+    "kb": 0,
+    "about": "Answer sums and kids' facts. Each right answer is a step. First home wins."
+  }
+]
