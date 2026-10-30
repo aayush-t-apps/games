@@ -210,7 +210,11 @@ export function penalty(m) {
   return score;
 }
 
-/** The QR matrix (rows of booleans, dark = true) for a text, at the smallest version that fits. */
+/**
+ * The QR matrix (rows of booleans, dark = true) for a text, at the smallest version that fits.
+ * @param {string} text
+ * @returns {boolean[][]}
+ */
 export function qrMatrix(text) {
   const bytes = [...new TextEncoder().encode(text)];
   let ver = 1;

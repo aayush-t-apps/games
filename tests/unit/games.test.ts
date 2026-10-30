@@ -135,7 +135,11 @@ describe.each(GAMES.map((g) => [g.id, g] as const))("%s", (_id, game) => {
       let state = game.init(seats, seed);
       for (let n = 0; n < 2000 && !game.winner(state); n++) {
         const views = Array.from({ length: seats }, (_, s) => game.view(state, s));
-        const size = JSON.stringify({ views, public: game.view(state, null), snapshot: { state } }).length;
+        const size = JSON.stringify({
+          views,
+          public: game.view(state, null),
+          snapshot: { state },
+        }).length;
         largest = Math.max(largest, size);
         state = game.apply(state, state.turn, game.ai(state, state.turn, "easy"));
       }

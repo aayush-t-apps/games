@@ -72,8 +72,19 @@ describe("the room transport", () => {
     const got: unknown[] = [];
     room.onMessage((m: unknown) => got.push(m));
     last().open();
-    expect(JSON.parse(last().sent[0] as string)).toEqual({ v: 1, t: "hello", nick: "Sam", ownerToken: "own" });
-    last().get({ v: 1, t: "welcome", seat: 1, seatToken: "seat", room: { seats: [{ nick: "Ana", cpu: false, online: true }] } });
+    expect(JSON.parse(last().sent[0] as string)).toEqual({
+      v: 1,
+      t: "hello",
+      nick: "Sam",
+      ownerToken: "own",
+    });
+    last().get({
+      v: 1,
+      t: "welcome",
+      seat: 1,
+      seatToken: "seat",
+      room: { seats: [{ nick: "Ana", cpu: false, online: true }] },
+    });
     expect(tokens("K7M2QX", storage)).toEqual({ ownerToken: "own", seatToken: "seat" });
     expect(room.seat).toBe(1);
     expect(room.up).toBe(true);
@@ -86,7 +97,9 @@ describe("the room transport", () => {
   it("reconnects after a drop, with backoff, and gives its seat token back (AC6.4)", () => {
     const room = createRoom(opts());
     const links: boolean[] = [];
-    room.onMessage((m: { t: string; up?: boolean }) => m.t === "link" && links.push(m.up as boolean));
+    room.onMessage(
+      (m: { t: string; up?: boolean }) => m.t === "link" && links.push(m.up as boolean),
+    );
     last().open();
     last().get({ v: 1, t: "welcome", seat: 1, seatToken: "seat", room: null });
     last().close();
@@ -124,7 +137,11 @@ describe("the room transport", () => {
   });
 
   it("stops for good when the room closes, refuses the device, or the device leaves", () => {
-    for (const msg of [{ t: "closed" }, { t: "error", code: "kicked" }, { t: "error", code: "full" }]) {
+    for (const msg of [
+      { t: "closed" },
+      { t: "error", code: "kicked" },
+      { t: "error", code: "full" },
+    ]) {
       createRoom(opts());
       last().open();
       last().get({ v: 1, ...msg });

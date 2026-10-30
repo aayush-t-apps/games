@@ -59,14 +59,15 @@ function opens(code: string, from: string): Promise<boolean> {
   const ws = new WebSocket(`ws://${worker.url.host}/api/rooms/${code}/ws`, {
     headers: { origin: from },
   } as unknown as string[]);
-  let opened = false;
-  ws.addEventListener("open", () => {
-    opened = true;
-    ws.send(JSON.stringify({ v: 1, t: "hello", table: true }));
+  ws.addEventListener("open", () => ws.send(JSON.stringify({ v: 1, t: "hello", table: true })));
+  return new Promise((done) => {
+    // Close once the room answered, so neither side writes to a closed socket.
+    ws.addEventListener("message", () => {
+      ws.close();
+      done(true);
+    });
+    ws.addEventListener("error", () => done(false));
   });
-  // Close once the room answered, so neither side writes to a closed socket.
-  ws.addEventListener("message", () => ws.close());
-  return new Promise((done) => ws.addEventListener("close", () => done(opened)));
 }
 
 const post = (path: string, body: unknown, method = "POST") =>

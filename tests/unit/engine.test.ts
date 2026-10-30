@@ -173,7 +173,13 @@ describe("engine", () => {
     say({ t: "move", seat: 0, seq: 0, move: { t: "add", n: 2 } });
     const types = out.map((m) => m.t);
     expect(types).toEqual(["view", "view", "public", "view", "view", "public"]);
-    expect(out.at(-1)).toMatchObject({ seq: 1, turn: 1, view: { total: 2 }, legal: [], note: "@0 added 2" });
+    expect(out.at(-1)).toMatchObject({
+      seq: 1,
+      turn: 1,
+      view: { total: 2 },
+      legal: [],
+      note: "@0 added 2",
+    });
   });
 
   it("goes on from a snapshot on another device, at the same seq (AC6.5)", () => {
@@ -188,7 +194,10 @@ describe("engine", () => {
     transport.onMessage((m: Msg) => out.push(m));
     const b = createEngine({ game: race, seats, seed: 99, transport, from: snap });
     b.start();
-    expect(out.find((m) => m.t === "view" && m.seat === 1)).toMatchObject({ seq: 1, view: { total: 2 } });
+    expect(out.find((m) => m.t === "view" && m.seat === 1)).toMatchObject({
+      seq: 1,
+      view: { total: 2 },
+    });
     transport.send({ v: 1, t: "move", seat: 1, seq: 1, move: { t: "add", n: 1 } });
     expect(b.state.total).toBe(3);
     const count = out.length;

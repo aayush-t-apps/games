@@ -43,7 +43,9 @@ describe("QR codes", () => {
 
   it("draw as SVG with a quiet zone and a label", () => {
     const svg = qrSvg(LINK, "QR code for the room link");
-    expect(svg).toMatch(/^<svg viewBox="0 0 37 37" role="img" aria-label="QR code for the room link"/);
+    expect(svg).toMatch(
+      /^<svg viewBox="0 0 37 37" role="img" aria-label="QR code for the room link"/,
+    );
     expect(svg).toContain('d="M4 4h1v1h-1z');
   });
 });
