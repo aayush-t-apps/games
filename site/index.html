@@ -2,13 +2,35 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Games</title>
+<meta name="description" content="Six classic card, board and kids' games for any device: play against the CPU or pass-and-play, offline.">
+<meta name="theme-color" content="#1f5f46">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link rel="stylesheet" href="/lib/app.css">
+<script type="module" src="/lib/app.js"></script>
 </head>
 <body>
-<main>
-  <h1>Games</h1>
-  <p>A public hub of six classic card, board and kids' games that anyone plays in a browser or as an installed app, solo against the CPU or pass-and-play, offline, with scores kept on the device.</p>
+<header class="topbar">
+  <a class="brand" href="/" id="home">Games</a>
+  <span class="offline-mark" id="offline" hidden>Offline</span>
+  <button class="ghost" type="button" id="open-settings">Settings</button>
+</header>
+<div class="update" id="update" role="status" hidden>
+  <span>Update ready.</span>
+  <button class="primary" type="button" id="apply-update">Reload with the update</button>
+</div>
+<main id="main" tabindex="-1">
+  <p class="loading" id="boot">Getting the games…</p>
+  <noscript><p class="loading">Games needs JavaScript. Turn it on to play.</p></noscript>
+  <p class="loading" id="old" hidden>Please update your browser to play.</p>
 </main>
+<div class="sr-only" id="live" aria-live="polite"></div>
+<script nomodule>
+  document.getElementById("boot").hidden = true;
+  document.getElementById("old").hidden = false;
+</script>
 </body>
 </html>

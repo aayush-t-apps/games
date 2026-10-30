@@ -2,3 +2,7 @@
 # file to let them index it.
 /*
   X-Robots-Tag: noindex
+
+# The browser checks the service worker for a new release each time the app opens.
+/sw.js
+  Cache-Control: no-cache

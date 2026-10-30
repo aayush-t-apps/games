@@ -1,0 +1,20 @@
+{
+  "name": "Games",
+  "short_name": "Games",
+  "description": "Six classic card, board and kids' games: play against the CPU or pass-and-play, offline.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f7f4ec",
+  "theme_color": "#1f5f46",
+  "categories": ["games", "kids", "entertainment"],
+  "icons": [
+    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [{ "name": "Play a game", "url": "/", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }]
+}
