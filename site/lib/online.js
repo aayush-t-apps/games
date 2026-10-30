@@ -13,6 +13,8 @@ const LEVELS = { easy: "Easy", normal: "Normal", hard: "Hard" };
 const CPU_PAUSE = 600;
 /** As the room's OWNER_WAIT_MS (src/worker/room-logic.ts): when the owner's controls pass on. */
 const OWNER_WAIT_MS = 2 * 60 * 1000;
+/** While "Reconnecting…": how often to check whether the room has ended. */
+const ENDED_CHECK_MS = 30_000;
 /** The room this device is in, if any. */
 let s = null;
 
@@ -98,12 +100,20 @@ export function startRoom(g) {
         class: "setup",
         onsubmit: async (event) => {
           event.preventDefault();
+          const form = event.currentTarget;
+          const submit = form.querySelector("[type=submit]");
+          // One tap, one room: the button waits for the answer.
+          if (submit.disabled) return;
+          submit.disabled = true;
           store.setNick(nick.value);
           status.textContent = "Starting the room…";
           const { status: code, body } = await api("/api/member/rooms", {
             method: "POST",
             body: JSON.stringify({ game: g.id, version: g.version, ...cfg }),
           }).catch(() => ({ status: 0, body: null }));
+          submit.disabled = false;
+          // The player went back meanwhile: the room isn't opened over another screen.
+          if (!form.isConnected) return;
           if (code === 201) {
             keepToken(body.code, { ownerToken: body.ownerToken });
             history.pushState(null, "", `/r/${body.code}`);
@@ -155,7 +165,10 @@ export async function openRoom(code, join) {
   if (s?.code === code) return;
   leave(true);
   page(`Room ${code}`, el("p", { class: "loading", role: "status" }, "Finding the room…"));
+  // Back (or Back to games) while it loads: the room doesn't open over the hub.
+  const here = () => location.pathname.replace(/\/$/, "").toUpperCase() === `/R/${code}`;
   const { status, body: info } = await api(`/api/rooms/${code}`).catch(() => ({ status: 0 }));
+  if (!here()) return;
   if (status === 404) return message("This room has ended", "Ask for a new link, or start a room yourself.");
   if (status !== 200) return message(`Room ${code}`, "Online play needs signal. Connect, then try again.", el("button", { type: "button", class: "primary", onclick: () => openRoom(code) }, "Try again"));
   const g = gameById(info.game);
@@ -167,6 +180,7 @@ export async function openRoom(code, join) {
   } catch {
     return message(g.name, `${g.name} needs signal once. Connect to the internet, then try again.`);
   }
+  if (!here()) return;
   const mine = tokens(code);
   if (join || mine.seatToken || mine.ownerToken) return connect(code, g, code_, join ?? { nick: nickOf() || "Player" });
   askNick(code, g, code_, info);
@@ -212,6 +226,7 @@ function askNick(code, g, game, info, why = "") {
 // ---------- The room ----------
 
 function connect(code, g, game, hello) {
+  leave(true);
   const room = createRoom({ code, hello });
   s = {
     code,
@@ -241,9 +256,22 @@ function connect(code, g, game, hello) {
 
 const wake = () => s?.room.wake();
 
+/**
+ * Still reconnecting: has the room ended meanwhile (its link then never comes back)? One small
+ * call now and then while the link is down, never while it is up (AC6.7).
+ */
+async function stillOpen(mine) {
+  if (s !== mine) return;
+  const { status } = await api(`/api/rooms/${mine.code}`).catch(() => ({ status: 0 }));
+  if (s !== mine) return;
+  if (status === 404) return gone("This room has ended", "Ask for a new link, or start a room yourself.");
+  mine.check = setTimeout(() => stillOpen(mine), ENDED_CHECK_MS);
+}
+
 /** Close this device's link to its room; its seat waits for it. `quiet`: the hub opens anyway. */
 function leave(quiet = false) {
   if (!s) return;
+  clearTimeout(s.check);
   s.engine?.stop();
   s.room.close();
   window.removeEventListener("online", wake);
@@ -255,9 +283,15 @@ function leave(quiet = false) {
 function leaveRoom() {
   if (!s) return;
   const handsOver = s.owner && s.info?.seats.some((x, i) => i !== s.me && x.online && !x.cpu);
-  const ask = handsOver ? "Leave this room? Your seat opens, and the owner's controls pass to the next player." : "Leave this room? Your seat opens for someone else.";
+  const ask =
+    s.me === null || s.me === undefined
+      ? "Stop watching this room?"
+      : handsOver
+        ? "Leave this room? Your seat opens, and the owner's controls pass to the next player."
+        : "Leave this room? Your seat opens for someone else.";
   if (!window.confirm(ask)) return;
-  s.room.send({ t: "leave" });
+  // Offline, the room can't open the seat: keep it, and say so, rather than strand it.
+  if (!s.room.send({ t: "leave" })) return say("Reconnecting… try again in a moment.");
   forgetTokens(s.code);
   leave();
 }
@@ -269,6 +303,8 @@ function onRoom(msg) {
   switch (msg.t) {
     case "link":
       s.status.textContent = msg.up ? "" : "Reconnecting…";
+      clearTimeout(s.check);
+      if (!msg.up) s.check = setTimeout(() => stillOpen(s), ENDED_CHECK_MS);
       drawBar();
       return;
     case "welcome":
@@ -346,6 +382,10 @@ const seatName = (x, i) => (x.cpu ? `CPU ${i + 1}` : x.nick || `Seat ${i + 1}`);
 // ---------- The lobby (AC5.2, AC5.3) ----------
 
 function lobby() {
+  // A seat update redraws the lobby: keep the keyboard focus where it was (not on the heading).
+  const again = s.screen === "lobby";
+  const before = document.activeElement;
+  const label = before?.closest?.("#main button") ? before.textContent : null;
   s.screen = "lobby";
   const { code, info, g } = s;
   const owner = s.owner;
@@ -445,6 +485,10 @@ function lobby() {
     s.status,
     el("div", { class: "row" }, el("button", { type: "button", onclick: leaveRoom }, "Leave the room")),
   );
+  if (!again) return;
+  const same = label && [...document.querySelectorAll("#main button")].find((b) => b.textContent === label);
+  if (same) same.focus();
+  else if (before?.isConnected && before !== document.body) before.focus();
 }
 
 // ---------- The match ----------
@@ -497,6 +541,8 @@ function sendMove(msg) {
 /** The result screen's buttons (AC7.1): Rematch for the owner, Scores, back to the room, Leave. */
 function actions() {
   return [
+    // Where the room's answers show (a refused Rematch, "Reconnecting…").
+    s?.status ?? null,
     s?.owner ? el("button", { type: "button", class: "primary big", onclick: () => s.room.send({ t: "owner", op: "rematch" }) }, "Rematch") : el("p", { class: "hint-text" }, "The owner can start a rematch."),
     el("button", { type: "button", onclick: () => showScores(s.g.id, true) }, "Scores"),
     el("button", { type: "button", onclick: () => lobby() }, "Back to the room"),

@@ -907,8 +907,14 @@ async function startApp() {
   const offline = document.getElementById("offline");
   const signal = () => {
     offline.hidden = navigator.onLine;
+    // The friends panel hides offline and comes back online.
+    if (screen === "hub") document.getElementById("online-slot")?.replaceChildren(...[onlineSection()].filter(Boolean));
   };
-  window.addEventListener("online", signal);
+  window.addEventListener("online", () => {
+    signal();
+    // Opened offline, the member check failed: try again now.
+    checkOnline();
+  });
   window.addEventListener("offline", signal);
   signal();
   document.getElementById("open-settings").addEventListener("click", openSettings);

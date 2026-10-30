@@ -29,7 +29,16 @@ Versions: [Semantic Versioning](https://semver.org/). Change docs: `docs/changes
 ### Fixed
 
 - Members couldn't sign in: the service worker answered Cloudflare Access's return page
-  (`/cdn-cgi/access/authorized`) from its cache, so the sign-in never finished.
+  (`/cdn-cgi/access/authorized`) from its cache, so the sign-in never finished. Members can now
+  **Sign out** too.
+- Online flows (an audit): a room that ended while a device was away now says "This room has
+  ended" instead of "Reconnecting…" for good; a refused **Rematch** says why on the result screen;
+  **Start the room** tapped twice makes one room; **Leave the room** while reconnecting keeps the
+  seat and says to try again; Back while a room loads no longer opens it over the hub; a lobby
+  update keeps the keyboard focus; a player who quits mid-match is "Seat N" in the scores, never a
+  blank winner; the friends panel comes back when the device is online again.
+- Admin: no signal shows a message instead of "Loading…" for good; a failed **Close** says so;
+  reordering after **Save** says "Not saved yet." and keeps the focus on an arrow.
 
 ## [0.3.0] - 2026-10-30
 

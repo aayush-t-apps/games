@@ -1381,6 +1381,12 @@ button.danger {
   font-weight: 700;
   color: var(--red);
 }
+.row > .room-status {
+  flex-basis: 100%;
+}
+.row > .room-status:empty {
+  display: none;
+}
 :root[data-theme="dark"] .room-status,
 :root[data-theme="contrast"] .room-status {
   color: #ffb4a8;

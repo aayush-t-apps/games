@@ -416,6 +416,15 @@ describe("the match record (AC7.1)", () => {
     expect(matchRecord(m, [[0, 1, 2]], NOW).winner).toBeNull();
   });
 
+  it("names a seat whose player left mid-match by the seat, never as a blank winner", () => {
+    const m = room(2);
+    m.seats[0] = { nick: "Ana", cpu: false, token: "a" };
+    m.seats[1] = { nick: "", cpu: false, token: null };
+    const record = matchRecord(m, [[1], [0]], NOW);
+    expect(record.players).toEqual(["Ana", "Seat 2"]);
+    expect(record.winner).toBeNull();
+  });
+
   it("takes only places that list every seat once", () => {
     const m = room(3);
     expect(validPlaces(m, [[0], [1, 2]])).toEqual([[0], [1, 2]]);
