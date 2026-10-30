@@ -2,6 +2,7 @@
 // every named export of the entry module as an entrypoint. App code lives in ./app.ts: its `app`
 // answers requests, and its `scheduled`, when it exports one, runs on the cron triggers in
 // wrangler.jsonc.
+// The one exception: the Durable Object classes, which the runtime needs as named exports.
 import * as entry from "./app";
 
 type Scheduled = ExportedHandlerScheduledHandler<entry.Env>;
@@ -11,3 +12,4 @@ export default {
   fetch: entry.app.fetch,
   ...(scheduled ? { scheduled } : {}),
 } satisfies ExportedHandler<entry.Env>;
+export * from "./objects";

@@ -13,9 +13,6 @@
     "id": "site",
     "version": "1.0.0"
   },
-  "options": [
-    "do"
-  ],
   "staging": false,
   "service": null,
   "repository": {
@@ -37,6 +34,9 @@
   "vars": [
     "CLOUDFLARE_ACCOUNT_ID",
     "CF_WORKERS_SUBDOMAIN"
+  ],
+  "options": [
+    "do"
   ],
   "platformVersion": "0.1.17",
   "createdAt": "2026-10-30T18:21:05.989Z"
