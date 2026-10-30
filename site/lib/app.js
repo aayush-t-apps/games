@@ -83,15 +83,19 @@ export function showHub() {
     el("div", { id: "online-slot" }, onlineSection()),
     el("ul", { class: "shelf" }, games.map(gameBox)),
     el(
-      "section",
-      { class: "offline-row", "aria-labelledby": "offline-title" },
-      el("h2", { id: "offline-title" }, "Play with no signal"),
-      el("p", {}, "Each game is saved on this device the first time you open it, or save them all now."),
-      el("button", { type: "button", id: "download-all", onclick: downloadAll }, "Download all for offline"),
-      el("p", { id: "download-status", role: "status" }),
+      "div",
+      { class: "extras" },
+      el(
+        "section",
+        { class: "offline-row", "aria-labelledby": "offline-title" },
+        el("h2", { id: "offline-title" }, "Play with no signal"),
+        el("p", {}, "Each game is saved on this device the first time you open it, or save them all now."),
+        el("button", { type: "button", id: "download-all", onclick: downloadAll }, "Download all for offline"),
+        el("p", { id: "download-status", role: "status" }),
+      ),
+      scoresSection(),
+      installSection(),
     ),
-    scoresSection(),
-    installSection(),
   );
   markCached();
 }
@@ -181,20 +185,24 @@ function onlineSection() {
   return el(
     "section",
     { class: "online-row", "aria-labelledby": "online-title" },
-    el("h2", { id: "online-title" }, "Play with friends online"),
     el(
-      "p",
-      {},
-      net.member
-        ? "Pick Play online on a game, then share the room's link, code or QR code."
-        : "Members start rooms. Anyone with a room's link or code joins, with no sign-in.",
+      "div",
+      { class: "online-text" },
+      el("h2", { id: "online-title" }, "Play with friends online"),
+      el(
+        "p",
+        {},
+        net.member
+          ? "Tap Play online on a game, then share the room's link, code or QR code."
+          : "Got a room code or link from a friend? Join with no sign-in.",
+      ),
     ),
     el(
       "div",
       { class: "row" },
-      net.member ? null : el("a", { class: "button primary", href: "/member" }, "Sign in to play online"),
-      el("button", { type: "button", onclick: () => online().then((o) => o.showJoin()) }, "Join a room"),
+      el("button", { type: "button", class: "primary", onclick: () => online().then((o) => o.showJoin()) }, "Join a room"),
       el("button", { type: "button", onclick: () => online().then((o) => o.showScores()) }, "Online scores"),
+      net.member ? null : el("a", { class: "button", href: "/member" }, "Members: sign in"),
       net.admin ? el("a", { class: "button", href: "/admin" }, "Admin") : null,
     ),
   );
@@ -781,7 +789,6 @@ function finish(m, places) {
 
 function openSettings() {
   const data = store.get();
-  const status = el("p", { role: "status", id: "import-status" });
   const dialog = el(
     "dialog",
     { class: "sheet", "aria-labelledby": "settings-title" },
@@ -834,11 +841,6 @@ function openSettings() {
         }),
         "Sounds",
       ),
-      el("h3", {}, "Move your scores to another device"),
-      el("div", { class: "row" }, el("button", { type: "button", id: "export", onclick: exportData }, "Export my data")),
-      el("label", { for: "import" }, "Import a save file"),
-      el("input", { type: "file", id: "import", accept: ".json,application/json", onchange: (e) => importData(e.target, status) }),
-      status,
       store.kept ? null : el("p", { class: "warn" }, "This browser isn't keeping data (private mode?), so your scores won't be kept."),
       install ? el("button", { type: "button", onclick: () => install?.() }, "Install Games") : null,
       el("div", { class: "row" }, el("button", { class: "primary", value: "done" }, "Done")),
@@ -850,28 +852,6 @@ function openSettings() {
   });
   document.body.append(dialog);
   dialog.showModal();
-}
-
-function exportData() {
-  const blob = new Blob([store.exportText()], { type: "application/json" });
-  const link = el("a", { href: URL.createObjectURL(blob), download: "games-save.json" });
-  document.body.append(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-}
-
-async function importData(input, status) {
-  const file = input.files?.[0];
-  if (!file) return;
-  const why = file.size > 100_000 ? "This file is too big to be a Games save." : store.importText(await file.text());
-  status.textContent = why ?? "Save loaded.";
-  status.className = why ? "warn" : "";
-  input.value = "";
-  if (!why) {
-    applySettings();
-    document.getElementById("nick").value = store.get().player.nick;
-  }
 }
 
 // ---------- Start ----------

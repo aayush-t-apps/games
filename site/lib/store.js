@@ -1,5 +1,5 @@
 // What the app keeps, only in this browser: localStorage key `games.v1`. This is the only module
-// that touches localStorage. Export and Import move the same shape, with `format: "games.v1"`.
+// that touches localStorage. What it reads back is checked, and anything broken starts blank.
 
 export const KEY = "games.v1";
 export const FORMAT = "games.v1";
@@ -34,10 +34,10 @@ export function cleanNick(text) {
 const isCount = (n) => Number.isInteger(n) && n >= 0;
 const isObject = (o) => o !== null && typeof o === "object" && !Array.isArray(o);
 
-/** Why `data` isn't a games.v1 save, or null when it is. */
+/** Why `data` isn't readable games.v1 data, or null when it is. */
 export function problem(data) {
-  if (!isObject(data)) return "This file isn't a Games save.";
-  if (data.format !== FORMAT) return "This file isn't a Games save (format games.v1).";
+  if (!isObject(data)) return "This isn't Games data.";
+  if (data.format !== FORMAT) return "This isn't Games data (format games.v1).";
   const { player, settings, scores, recent } = data;
   if (!isObject(player) || typeof player.nick !== "string" || typeof player.id !== "string")
     return "The save has no player name.";
@@ -75,7 +75,7 @@ export function problem(data) {
   return null;
 }
 
-/** Keep only the known fields, so nothing else comes in with an import. */
+/** Keep only the known fields of what was stored. */
 function tidy(data) {
   return {
     player: { id: data.player.id, nick: cleanNick(data.player.nick), named: true },
@@ -165,23 +165,6 @@ export function createStore(storage = safeStorage()) {
         (t, s) => ({ played: t.played + s.played, won: t.won + s.won }),
         { played: 0, won: 0 },
       );
-    },
-    exportText() {
-      return JSON.stringify({ format: FORMAT, ...data }, null, 2);
-    },
-    /** Load an exported file. Returns null, or the reason it was refused (nothing changes). */
-    importText(text) {
-      let parsed;
-      try {
-        parsed = JSON.parse(text);
-      } catch {
-        return "This file isn't a Games save.";
-      }
-      const why = problem(parsed);
-      if (why) return why;
-      data = tidy(parsed);
-      save();
-      return null;
     },
   };
 }

@@ -138,6 +138,9 @@ describe("Access tokens", () => {
     });
     const local = await checkAccess(req(undefined, "http://localhost:8787/api/member/me"), {});
     expect(local).toEqual({ ok: true, caller: { email: DEV_EMAIL, dev: true } });
+    // With the production values set too: Access never sits in front of localhost.
+    const set = await checkAccess(req(undefined, "http://127.0.0.1:8787/api/member/me"), env);
+    expect(set).toEqual({ ok: true, caller: { email: DEV_EMAIL, dev: true } });
     expect(accessReady(req(), {})).toBe(false);
     expect(accessReady(req(undefined, "http://127.0.0.1/x"), {})).toBe(true);
     expect(accessReady(req(), env)).toBe(true);

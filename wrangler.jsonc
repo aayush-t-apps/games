@@ -30,13 +30,15 @@
     "Hub": { "type": "durable-object", "storage": "sqlite" }
   },
   // ACCESS_TEAM (<team>.cloudflareaccess.com) and ACCESS_AUD (the Access app's audience tag) come
-  // from the owner's Access setup (docs/adr/0001-members-sign-in-with-access.md). Empty: online
-  // play is off. ADMIN_EMAIL is a runtime secret (shipify.json).
+  // from the owner's Access setup (docs/adr/0001-members-sign-in-with-access.md). Neither is a
+  // secret: Access sends the AUD tag to every browser it signs in. Empty: online play is off.
+  // On localhost (make dev, the tests) the caller is always the developer. ADMIN_EMAIL is a
+  // runtime secret (shipify.json).
   "vars": {
     "APP_ID": "games",
     "APP_ENV": "production",
     "GIT_SHA": "dev",
-    "ACCESS_TEAM": "",
-    "ACCESS_AUD": ""
+    "ACCESS_TEAM": "rough-morning-dee7.cloudflareaccess.com",
+    "ACCESS_AUD": "444e544988d68a02d60d218c4d753cfa7e179bfa6fef0905eaf1b7e79151785f" // gitleaks:allow: a public Access audience tag, not a key
   }
 }

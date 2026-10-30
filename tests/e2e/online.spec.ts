@@ -87,6 +87,39 @@ test("a desktop and a phone play Four in a Row online, and the score shows (AC5.
   await phone.context().close();
 });
 
+test("the owner taps Leave: the seat opens and the guest gets the owner's controls (AC5.5)", async ({
+  browser,
+  baseURL,
+}, info) => {
+  test.skip(info.project.name !== "desktop", "one run: the test opens a desktop and a phone");
+  test.setTimeout(60_000);
+  const desk = await (
+    await browser.newContext({ ...devices["Desktop Chrome"], baseURL })
+  ).newPage();
+  const phone = await (await browser.newContext({ ...devices["Pixel 7"], baseURL })).newPage();
+  await named(desk, "Ana");
+  await desk.getByRole("button", { name: "Play online: Four in a Row" }).click();
+  await desk.getByRole("button", { name: "Start the room" }).click();
+  const code = (await desk.locator(".room-code").textContent())?.trim() ?? "";
+  await phone.goto(`/r/${code}`);
+  await phone.getByLabel("Your nickname (1 to 16 letters)").fill("Sam");
+  await phone.getByRole("button", { name: "Join", exact: true }).click();
+  await expect(phone.getByText("Waiting for Ana to start.")).toBeVisible();
+  await expect(phone.getByRole("button", { name: "Start", exact: true })).toHaveCount(0);
+
+  desk.once("dialog", (d) => d.accept());
+  await desk.getByRole("button", { name: "Leave the room" }).click();
+  await expect(desk.getByRole("heading", { name: /^Pick a game/ })).toBeVisible();
+
+  // Sam owns the room now: the controls, the owner tag, and Ana's seat open.
+  await expect(phone.getByRole("button", { name: "Start", exact: true })).toBeVisible();
+  await expect(phone.locator(".seat-row", { hasText: "Sam" }).locator(".tag.owner")).toBeVisible();
+  await expect(phone.locator(".seat-row").first()).toContainText("free");
+  await accessible(phone);
+  await desk.context().close();
+  await phone.context().close();
+});
+
 test("a room's link that has ended says so (AC6.7)", async ({ page }) => {
   await page.goto("/r/ABCDEF");
   await expect(page.getByRole("heading", { name: "This room has ended" })).toBeVisible();
@@ -118,9 +151,33 @@ test("the admin page opens on the Overview, with its four tabs (AC8.1)", async (
   );
   await expect(page.getByRole("heading", { name: "Today" })).toBeVisible();
   await accessible(page);
+  await expect(page.getByText("Signed in as dev@localhost")).toBeVisible();
+
+  // A column head sorts its table, then the other way (AC8.7).
+  const size = page.getByRole("columnheader", { name: "Size" });
+  await size.getByRole("button").click();
+  await expect(size).toHaveAttribute("aria-sort", "ascending");
+  const firstGame = page.locator(".table-wrap").first().locator("tbody tr th").first();
+  await expect(firstGame).toHaveText("Memory");
+  await size.getByRole("button").click();
+  await expect(size).toHaveAttribute("aria-sort", "descending");
+  await expect(firstGame).toHaveText("Ludo");
+
   await page.getByRole("tab", { name: "Games" }).click();
   await expect(page.getByRole("button", { name: "Move Ludo up" })).toBeVisible();
   await accessible(page);
+  await page.getByRole("tab", { name: "Rooms" }).click();
+  await expect(page.getByRole("button", { name: "Refresh" })).toBeVisible();
+  await accessible(page);
   await page.getByRole("tab", { name: "Scores" }).click();
   await expect(page.getByRole("link", { name: "Export" })).toBeVisible();
+  // Restore (AC8.8): the time field and the button; local workerd has no point-in-time
+  // recovery, so the restore itself is checked only through the API's unit tests.
+  await expect(page.getByLabel("Restore to (this device's time)")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Restore…" })).toBeVisible();
+  await accessible(page);
+  // Arrow keys move between the tabs.
+  await page.getByRole("tab", { name: "Scores" }).focus();
+  await page.keyboard.press("ArrowLeft");
+  await expect(page.getByRole("tab", { name: "Rooms" })).toHaveAttribute("aria-selected", "true");
 });

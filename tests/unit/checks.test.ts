@@ -10,7 +10,9 @@ import {
   newCode,
   newToken,
   nick,
+  RESTORE_DAYS,
   readJson,
+  restoreRequest,
   roomRequest,
   sameOrigin,
 } from "../../src/worker/checks";
@@ -92,6 +94,34 @@ describe("the admin's catalogue", () => {
     );
     expect(catalogUpdate([{ ...rows[0], enabled: 1 }])).toBe("On and featured are true or false.");
     expect(catalogUpdate([{ ...rows[0], sort: "1" }])).toBe("The order is a whole number.");
+  });
+});
+
+describe("a restore of the Hub (AC8.8)", () => {
+  const NOW = Date.UTC(2026, 9, 31, 12);
+  const DAY = 24 * 60 * 60 * 1000;
+  it("is a time in the last 30 days, or the bookmark that undoes one", () => {
+    expect(restoreRequest({ at: NOW - DAY }, NOW)).toEqual({ at: NOW - DAY });
+    expect(restoreRequest({ at: NOW - RESTORE_DAYS * DAY + 120_000 }, NOW)).toMatchObject({
+      at: expect.any(Number),
+    });
+    expect(restoreRequest({ bookmark: "0000007b-0000b26e-00001538-0c3e87bb" }, NOW)).toEqual({
+      bookmark: "0000007b-0000b26e-00001538-0c3e87bb",
+    });
+  });
+
+  it.each([
+    [{}, "Pick a date and time."],
+    [null, "Pick a date and time."],
+    [{ at: "yesterday" }, "Pick a date and time."],
+    [{ at: 1.5 }, "Pick a date and time."],
+    [{ at: Date.UTC(2026, 9, 31, 13) }, "Pick a time in the past."],
+    [{ at: Date.UTC(2026, 8, 30) }, "Cloudflare keeps the last 30 days."],
+    [{ bookmark: "a b" }, "Unknown bookmark."],
+    [{ bookmark: "" }, "Unknown bookmark."],
+    [{ bookmark: "x".repeat(257) }, "Unknown bookmark."],
+  ])("refuses %j", (body, why) => {
+    expect(restoreRequest(body, NOW)).toBe(why);
   });
 });
 

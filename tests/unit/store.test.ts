@@ -85,53 +85,35 @@ describe("store", () => {
     expect(createStore(storage).get().player.nick).toBe("Player");
   });
 
-  it("exports one JSON file and imports it on another device (AC4.3)", () => {
-    const one = createStore(memory());
-    one.setNick("Ana");
-    one.setSettings({ sound: false, theme: "contrast" });
-    one.record(result(true));
-    const file = one.exportText();
-    expect(JSON.parse(file).format).toBe("games.v1");
+  it("reads back only data of the right shape; anything else starts blank", () => {
     const storage = memory();
-    const two = createStore(storage);
-    expect(two.importText(file)).toBeNull();
-    expect(two.get().player).toMatchObject({ nick: "Ana", id: one.get().player.id });
-    expect(two.get().settings).toEqual({ kid: false, theme: "contrast", sound: false });
-    expect(createStore(storage).totals("ludo")).toEqual({ played: 1, won: 1 });
-  });
-
-  it("refuses a file that isn't a save, with the reason, and changes nothing (AC4.3)", () => {
-    const store = createStore(memory());
+    const store = createStore(storage);
     store.setNick("Ana");
-    const before = JSON.stringify(store.get());
-    const good = JSON.parse(store.exportText());
-    const cases: [string, string][] = [
-      ["hello", "This file isn't a Games save."],
-      ["[1]", "This file isn't a Games save."],
+    store.record(result(true));
+    const good = { format: "games.v1", ...store.get() };
+    expect(problem(good)).toBeNull();
+    const cases: [unknown, string][] = [
+      ["hello", "This isn't Games data."],
+      [[1], "This isn't Games data."],
+      [{ ...good, format: "other" }, "This isn't Games data (format games.v1)."],
+      [{ ...good, player: {} }, "The save has no player name."],
       [
-        JSON.stringify({ ...good, format: "other" }),
-        "This file isn't a Games save (format games.v1).",
-      ],
-      [JSON.stringify({ ...good, player: {} }), "The save has no player name."],
-      [
-        JSON.stringify({ ...good, settings: { ...good.settings, theme: "pink" } }),
+        { ...good, settings: { ...good.settings, theme: "pink" } },
         "The save's settings aren't readable.",
       ],
-      [JSON.stringify({ ...good, scores: [] }), "The save's scores aren't readable."],
-      [JSON.stringify({ ...good, scores: { ludo: 3 } }), "The save's scores aren't readable."],
+      [{ ...good, scores: [] }, "The save's scores aren't readable."],
+      [{ ...good, scores: { ludo: 3 } }, "The save's scores aren't readable."],
       [
-        JSON.stringify({ ...good, scores: { ludo: { easy: { played: 1, won: 2 } } } }),
+        { ...good, scores: { ludo: { easy: { played: 1, won: 2 } } } },
         "The save's scores aren't readable.",
       ],
-      [JSON.stringify({ ...good, recent: {} }), "The save's results aren't readable."],
-      [
-        JSON.stringify({ ...good, recent: [{ game: "ludo" }] }),
-        "The save's results aren't readable.",
-      ],
+      [{ ...good, recent: {} }, "The save's results aren't readable."],
+      [{ ...good, recent: [{ game: "ludo" }] }, "The save's results aren't readable."],
     ];
-    for (const [text, reason] of cases) expect(store.importText(text)).toBe(reason);
-    expect(JSON.stringify(store.get())).toBe(before);
-    expect(problem(good)).toBeNull();
+    for (const [data, reason] of cases) expect(problem(data)).toBe(reason);
+    // A broken score in storage: the store starts blank instead.
+    storage.setItem(KEY, JSON.stringify({ ...good, scores: { ludo: 3 } }));
+    expect(createStore(storage).firstVisit).toBe(true);
   });
 
   it("cleans names", () => {

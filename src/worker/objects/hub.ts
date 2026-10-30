@@ -32,6 +32,25 @@ export class Hub extends DurableObject<Env> {
     q.unlist(this.sql, code);
   }
 
+  seated(code: string, players: number): void {
+    q.seated(this.sql, code, players);
+  }
+
+  /**
+   * Restore (AC8.8): the Hub's SQLite as it was at a time in the last 30 days, or at a bookmark
+   * (Cloudflare's point-in-time recovery, with nothing to set up). It takes effect when the Hub
+   * starts again (`restart`). Returns the bookmark of now, to undo it.
+   */
+  async restore(to: { at: number } | { bookmark: string }): Promise<{ undo: string }> {
+    const target = "at" in to ? await this.ctx.storage.getBookmarkForTime(to.at) : to.bookmark;
+    return { undo: await this.ctx.storage.onNextSessionRestoreBookmark(target) };
+  }
+
+  /** Start the Hub again, so a restore takes effect. The call itself ends in an error. */
+  restart(): void {
+    this.ctx.abort("restore");
+  }
+
   liveRooms(): q.LiveRoom[] {
     return q.liveRooms(this.sql, Date.now());
   }

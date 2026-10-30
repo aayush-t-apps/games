@@ -1,9 +1,11 @@
 // App-owned: the Room and Hub objects (src/worker/objects/) through the whole Worker, as
 // `wrangler dev` runs it, empty on each run. Access isn't set up here and the host is local, so
 // the caller is the developer (member and admin), as on `make dev` (ADR 0001).
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { localWorker } from "./support/worker";
 
+// workerd beside the other test files on a small machine: 5 s per test is too tight.
+vi.setConfig({ testTimeout: 20_000 });
 const worker = await localWorker();
 afterAll(() => worker.dispose());
 
@@ -248,6 +250,67 @@ describe("rooms: start, join, play, score (AC5.2, AC6.1–AC6.5, AC7.1)", () => 
     table.ws.close();
   });
 
+  it("passes the owner role on Leave, and opens the seat; the Hub counts the people (AC5.5, AC8.6)", async () => {
+    const { code, ownerToken } = await newRoom({ game: "crazy-eights", seats: 3 });
+    const owner = await device(code);
+    owner.send({ t: "hello", nick: "Ana", ownerToken });
+    await owner.next("welcome");
+    const sam = await device(code);
+    sam.send({ t: "hello", nick: "Sam" });
+    await sam.next("welcome");
+    const lou = await device(code);
+    lou.send({ t: "hello", nick: "Lou" });
+    await lou.next("welcome");
+    type Live = { code: string; players: number }[];
+    const live = async () =>
+      ((await (await worker.fetch("/api/admin/rooms")).json()) as Live).find((r) => r.code === code)
+        ?.players;
+    expect(await live()).toBe(3);
+
+    owner.send({ t: "leave" });
+    await owner.closed;
+    const seats = await sam.next("seats", (m) => (m.room as { owner: number }).owner === 1);
+    expect((seats.room as { seats: { taken: boolean }[] }).seats[0]?.taken).toBe(false);
+    expect(await live()).toBe(2);
+    // Sam owns the room now: a control works for Sam, and is refused to Lou.
+    sam.send({ t: "owner", op: "lock" });
+    await lou.next("seats", (m) => (m.room as { locked: boolean }).locked);
+    lou.send({ t: "owner", op: "unlock" });
+    expect(await lou.next("error")).toMatchObject({ code: "role" });
+    sam.ws.close();
+  });
+
+  it("starts the wait when the owner's device drops, and lets a player take the role (AC5.5)", async () => {
+    const { code, ownerToken } = await newRoom();
+    const owner = await device(code);
+    owner.send({ t: "hello", nick: "Ana", ownerToken });
+    await owner.next("welcome");
+    const sam = await device(code);
+    sam.send({ t: "hello", nick: "Sam" });
+    await sam.next("welcome");
+    sam.send({ t: "take-owner" });
+    expect(await sam.next("refused")).toMatchObject({ reason: "The owner is here." });
+
+    owner.ws.close();
+    await owner.closed;
+    const info = async () =>
+      (await (await worker.fetch(`/api/rooms/${code}`)).json()) as {
+        owner: number;
+        ownerAway: number | null;
+      };
+    await expect.poll(async () => (await info()).ownerAway).toBeGreaterThan(0);
+    sam.send({ t: "take-owner" });
+    await sam.next("seats", (m) => (m.room as { owner: number }).owner === 1);
+    expect(await info()).toMatchObject({ owner: 1, ownerAway: null });
+
+    // The member's device comes back to seat 0, without the role.
+    const back = await device(code);
+    back.send({ t: "hello", nick: "Ana", ownerToken });
+    expect(await back.next("welcome")).toMatchObject({ seat: 0, owner: false });
+    back.ws.close();
+    sam.ws.close();
+  });
+
   it("refuses a socket that says nothing first, a bad nickname and an old protocol", async () => {
     const { code } = await newRoom();
     const a = await device(code);
@@ -301,5 +364,19 @@ describe("the admin (AC8.1–AC8.4)", () => {
 
     const backup = (await (await worker.fetch("/api/admin/export")).json()) as { format: string };
     expect(backup.format).toBe("games-hub.v1");
+  });
+
+  it("asks the Hub for a restore, and says so when the storage can't (AC8.8)", async () => {
+    // Local workerd has no point-in-time recovery ("does not implement point-in-time recovery"):
+    // here the call reaches the Hub and is refused, and the Hub goes on as it was. On Cloudflare
+    // the same call restores; tests/unit/app.test.ts checks the route's answer and the restart.
+    const featured = [{ game: "ludo", enabled: true, featured: true, sort: 0 }];
+    expect((await post("/api/admin/catalog", featured, "PUT")).status).toBe(200);
+    const res = await post("/api/admin/restore", { at: Date.now() - 60_000 });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ error: "no_restore" });
+    expect(await (await worker.fetch("/api/admin/catalog")).json()).toEqual(featured);
+    expect((await post("/api/admin/restore", { at: Date.now() + 60_000 })).status).toBe(400);
+    expect((await post("/api/admin/catalog", [], "PUT")).status).toBe(200);
   });
 });

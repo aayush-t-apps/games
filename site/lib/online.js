@@ -5,12 +5,14 @@
 import { gameById, load, onLeave, players, setScreen, show, showHub, showMatch, shownGames, store } from "./app.js";
 import { createEngine } from "./engine.js";
 import { createLocal } from "./net/local.js";
-import { createRoom, keepToken, tokens } from "./net/room.js";
+import { createRoom, forgetTokens, keepToken, tokens } from "./net/room.js";
 import { qrSvg } from "./qr.js";
 import { announce, el, ordinal } from "./ui.js";
 
 const LEVELS = { easy: "Easy", normal: "Normal", hard: "Hard" };
 const CPU_PAUSE = 600;
+/** As the room's OWNER_WAIT_MS (src/worker/room-logic.ts): when the owner's controls pass on. */
+const OWNER_WAIT_MS = 2 * 60 * 1000;
 /** The room this device is in, if any. */
 let s = null;
 
@@ -31,6 +33,9 @@ function page(title, ...children) {
 function message(title, text, ...more) {
   page(title, el("p", { class: "loading" }, text), el("div", { class: "row" }, ...more, el("button", { type: "button", onclick: showHub }, "Back to games")));
 }
+
+/** A labelled field: the label above, the input full width (forms on a phone). */
+const field = (label, input, hint) => el("div", { class: "field" }, el("label", { for: input.id }, label), input, hint ? el("p", { class: "hint-text" }, hint) : null);
 
 const reload = (g) =>
   message(
@@ -67,16 +72,19 @@ export function startRoom(g) {
   function drawCpu() {
     cfg.cpu = Math.min(cfg.cpu, cfg.seats - 1);
     cpuBox.replaceChildren(
-      el("label", { for: "room-cpu" }, "CPU seats"),
-      el(
-        "select",
-        {
-          id: "room-cpu",
-          onchange: (e) => {
-            cfg.cpu = Number(e.target.value);
+      field(
+        "CPU seats",
+        el(
+          "select",
+          {
+            id: "room-cpu",
+            onchange: (e) => {
+              cfg.cpu = Number(e.target.value);
+            },
           },
-        },
-        Array.from({ length: cfg.seats }, (_, n) => el("option", { value: n, selected: n === cfg.cpu }, n === 0 ? "None: only people" : `${n} CPU`)),
+          Array.from({ length: cfg.seats }, (_, n) => el("option", { value: n, selected: n === cfg.cpu }, n === 0 ? "None: only people" : `${n} CPU`)),
+        ),
+        "A CPU seat plays by itself. You can change seats in the room too.",
       ),
     );
   }
@@ -107,9 +115,8 @@ export function startRoom(g) {
                 : (body?.text ?? "Online play is busy, try later.");
         },
       },
-      el("p", { class: "about" }, `Seats for ${players(g.players)}. Friends join with the room's link, code or QR code.`),
-      el("label", { for: "room-seats" }, "Seats"),
-      seatSelect,
+      el("p", { class: "about" }, `Seats for ${players(g.players)}. Friends join with the room's link, code or QR code, with no sign-in.`),
+      field("Seats", seatSelect),
       cpuBox,
       el(
         "fieldset",
@@ -142,7 +149,7 @@ export function startRoom(g) {
 
 /** "Join a room": type the code. */
 export function showJoin() {
-  const input = el("input", { id: "join-code", autocomplete: "off", autocapitalize: "characters", maxlength: "6", inputmode: "text", spellcheck: "false" });
+  const input = el("input", { id: "join-code", class: "code-input", autocomplete: "off", autocapitalize: "characters", maxlength: "6", inputmode: "text", spellcheck: "false", placeholder: "K7M2QX" });
   const status = el("p", { role: "status", class: "warn" });
   page(
     "Join a room",
@@ -161,10 +168,9 @@ export function showJoin() {
           openRoom(code);
         },
       },
-      el("label", { for: "join-code" }, "Room code"),
-      input,
-      el("div", { class: "row" }, el("button", { class: "primary big", type: "submit" }, "Join"), el("button", { type: "button", onclick: showHub }, "Back to games")),
+      field("Room code", input, "6 letters and digits, from the room's screen or its link."),
       status,
+      el("div", { class: "row" }, el("button", { class: "primary big", type: "submit" }, "Join"), el("button", { type: "button", onclick: showHub }, "Back to games")),
     ),
   );
   input.focus();
@@ -214,17 +220,16 @@ function askNick(code, g, game, info, why = "") {
           go(false);
         },
       },
-      el("label", { for: "join-nick" }, "Your nickname (1 to 16 letters)"),
-      input,
+      field("Your nickname (1 to 16 letters)", input, "The others see it on your seat."),
       el("p", { role: "status", class: "warn" }, why),
-      el(
-        "div",
-        { class: "row" },
-        el("button", { class: "primary big", type: "submit" }, "Join"),
-        el("button", { type: "button", onclick: () => go(true) }, "Join as Table"),
-        el("button", { type: "button", onclick: showHub }, "Back to games"),
-      ),
-      el("p", { class: "hint-text" }, "Join as Table: a big screen that shows the board to everyone, with no seat."),
+      el("div", { class: "row" }, el("button", { class: "primary big", type: "submit" }, "Join"), el("button", { type: "button", onclick: showHub }, "Back to games")),
+    ),
+    el(
+      "aside",
+      { class: "pane table-option", "aria-labelledby": "table-title" },
+      el("h2", { id: "table-title" }, "A TV or a big screen?"),
+      el("p", {}, "Join as Table: it shows the board to everyone, with no seat and no cards."),
+      el("button", { type: "button", onclick: () => go(true) }, "Join as Table"),
     ),
   );
   input.focus();
@@ -262,7 +267,7 @@ function connect(code, g, game, hello) {
 
 const wake = () => s?.room.wake();
 
-/** Leave this device's room. `quiet`: the hub is opening anyway. */
+/** Close this device's link to its room; its seat waits for it. `quiet`: the hub opens anyway. */
 function leave(quiet = false) {
   if (!s) return;
   s.engine?.stop();
@@ -272,6 +277,20 @@ function leave(quiet = false) {
   if (!quiet) showHub();
 }
 
+/** Leave the room for good (AC5.5): the seat opens, and the owner's controls pass on. */
+function leaveRoom() {
+  if (!s) return;
+  const handsOver = s.owner && s.info?.seats.some((x, i) => i !== s.me && x.online && !x.cpu);
+  const ask = handsOver ? "Leave this room? Your seat opens, and the owner's controls pass to the next player." : "Leave this room? Your seat opens for someone else.";
+  if (!window.confirm(ask)) return;
+  s.room.send({ t: "leave" });
+  forgetTokens(s.code);
+  leave();
+}
+
+/** Whether this device's seat has the owner's controls. */
+const owns = (room, me) => me !== null && me !== undefined && room?.owner === me;
+
 function onRoom(msg) {
   switch (msg.t) {
     case "link":
@@ -280,13 +299,14 @@ function onRoom(msg) {
       return;
     case "welcome":
       s.me = msg.seat;
-      s.owner = msg.owner;
       s.info = msg.room;
+      s.owner = owns(s.info, s.me);
       if (!s.info.playing) lobby();
       else if (s.screen !== "match") page(`${s.g.name} room`, el("p", { class: "loading", role: "status" }, "The match is on. Getting the table…"));
       return;
     case "seats":
       s.info = msg.room;
+      s.owner = owns(s.info, s.me);
       if (s.engine && s.info.host !== s.me) stopEngine();
       s.engine?.setAway(away());
       if (s.screen === "lobby" || (!s.info.playing && s.screen === "connecting")) lobby();
@@ -366,60 +386,90 @@ function lobby() {
     say("Link copied.");
   };
   const seats = info.seats.map((x, i) => {
-    const tags = [i === 0 ? "owner" : null, i === info.host ? "host" : null, i === s.me ? "you" : null].filter(Boolean);
-    const state = x.cpu ? "" : x.taken ? (x.online ? "here" : "away") : "free";
+    const tags = [i === info.owner ? "owner" : null, i === info.host ? "host" : null, i === s.me ? "you" : null].filter(Boolean);
+    const state = x.cpu ? "cpu" : x.taken ? (x.online ? "here" : "away") : "free";
     const controls = [];
-    if (owner && i > 0 && !info.playing) {
+    if (owner && i !== s.me && !info.playing) {
       if (!x.taken || x.cpu)
         controls.push(el("button", { type: "button", onclick: () => op({ op: "cpu", seat: i, on: !x.cpu }) }, x.cpu ? "Make it a seat" : "Make it a CPU"));
-      if (x.taken && !x.cpu) controls.push(el("button", { type: "button", onclick: () => op({ op: "kick", seat: i }) }, `Kick ${x.nick}`));
+      if (x.taken && !x.cpu) controls.push(el("button", { type: "button", class: "danger", onclick: () => op({ op: "kick", seat: i }) }, `Kick ${x.nick}`));
     }
     return el(
       "li",
-      { class: "seat" },
-      el("span", { class: "who" }, el("strong", {}, seatName(x, i)), tags.length ? ` (${tags.join(", ")})` : "", state ? `: ${state}` : ""),
-      ...controls,
+      { class: `seat-row ${state}` },
+      el(
+        "span",
+        { class: "who" },
+        el("strong", {}, x.taken || x.cpu ? seatName(x, i) : `Seat ${i + 1}`),
+        tags.map((t) => el("span", { class: `tag ${t}` }, t)),
+      ),
+      el("span", { class: "state" }, { cpu: "CPU", here: "here", away: "away", free: "free" }[state]),
+      controls.length ? el("span", { class: "row seat-tools" }, controls) : null,
     );
   });
-  const ownerTools = owner
-    ? [
-        el(
+  const ownerSeat = info.seats[info.owner];
+  const ownerName = ownerSeat?.taken ? seatName(ownerSeat, info.owner) : "the owner";
+  // The owner's device is away: its controls pass at the alarm, or to whoever taps (AC5.5).
+  const ownerAway = !owner && ownerSeat && !ownerSeat.online && !ownerSeat.cpu;
+  const at = (ms) => new Date(ms).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  const notice = ownerAway
+    ? el(
+        "div",
+        { class: "notice", role: "status" },
+        el("p", {}, `${ownerName === "the owner" ? "The owner" : ownerName} is away.${info.ownerAway ? ` The owner's controls pass to the next player at ${at(info.ownerAway + OWNER_WAIT_MS)}.` : ""}`),
+        s.me !== null ? el("button", { type: "button", onclick: () => s.room.send({ t: "take-owner" }) }, "Make me the owner") : null,
+      )
+    : null;
+  const invite = el(
+    "section",
+    { class: "pane invite", "aria-labelledby": "invite-title" },
+    el("h2", { id: "invite-title" }, "Invite"),
+    el("p", { class: "room-code", "aria-label": `Room code ${spaced(code)}` }, code),
+    el("div", { class: "qr", html: qrSvg(linkOf(code), `QR code for the link to room ${spaced(code)}`) }),
+    el("p", { class: "room-link" }, linkOf(code)),
+    el("div", { class: "row" }, el("button", { type: "button", onclick: share }, navigator.share ? "Share" : "Copy link")),
+    el("p", { class: "hint-text" }, "Friends scan the code, open the link, or tap Join a room and type the code."),
+  );
+  const filled = info.seats.filter((x) => x.taken || x.cpu).length;
+  const seatsPane = el(
+    "section",
+    { class: "pane", "aria-labelledby": "seats-title" },
+    el("h2", { id: "seats-title" }, `Seats: ${filled} of ${info.seats.length}`, info.locked ? el("span", { class: "tag locked" }, "locked") : null),
+    el("ul", { class: "seats" }, seats),
+    info.spectators ? el("p", { class: "hint-text" }, `${info.spectators} watching.`) : null,
+    owner
+      ? el(
           "div",
           { class: "row" },
-          el("button", { type: "button", class: "primary big", onclick: () => op({ op: "start" }) }, info.match ? "Rematch" : "Start"),
-          el("button", { type: "button", onclick: () => op({ op: info.locked ? "unlock" : "lock" }) }, info.locked ? "Unlock the room" : "Lock the room"),
           info.seats.length < info.max ? el("button", { type: "button", onclick: () => op({ op: "size", seats: info.seats.length + 1 }) }, "Add a seat") : null,
           info.seats.length > info.min ? el("button", { type: "button", onclick: () => op({ op: "size", seats: info.seats.length - 1 }) }, "Remove a seat") : null,
-          el("button", { type: "button", onclick: () => window.confirm("Close this room for everyone?") && op({ op: "close" }) }, "Close the room"),
-        ),
-      ]
-    : [
-        el(
-          "p",
-          {},
-          s.me === null
-            ? s.table
-              ? "This screen is the table: it shows the board when the match starts."
-              : "You're watching: the seats are taken or the room is locked."
-            : `Waiting for ${info.seats[0]?.nick || "the owner"} to start.`,
-        ),
-      ];
+          el("button", { type: "button", onclick: () => op({ op: info.locked ? "unlock" : "lock" }) }, info.locked ? "Unlock the room" : "Lock the room"),
+        )
+      : null,
+  );
+  const next = owner
+    ? el(
+        "div",
+        { class: "row lobby-actions" },
+        el("button", { type: "button", class: "primary big", onclick: () => op({ op: "start" }) }, info.match ? "Rematch" : "Start"),
+        el("button", { type: "button", class: "danger", onclick: () => window.confirm("Close this room for everyone?") && op({ op: "close" }) }, "Close the room"),
+      )
+    : el(
+        "p",
+        { class: "waiting" },
+        s.me === null
+          ? s.table
+            ? "This screen is the table: it shows the board when the match starts."
+            : "You're watching: the seats are taken or the room is locked."
+          : `Waiting for ${ownerName} to start.`,
+      );
   page(
     `${g.name} room`,
-    el(
-      "section",
-      { class: "lobby", "aria-label": "Room code and link" },
-      el("p", { class: "room-code", "aria-label": `Room code ${spaced(code)}` }, code),
-      el("div", { class: "qr", html: qrSvg(linkOf(code), `QR code for the link to room ${spaced(code)}`) }),
-      el("p", { class: "room-link" }, linkOf(code)),
-      el("div", { class: "row" }, el("button", { type: "button", onclick: share }, navigator.share ? "Share" : "Copy link")),
-    ),
-    el("h2", {}, `Seats (${info.seats.length})${info.locked ? ": locked" : ""}`),
-    el("ul", { class: "seats" }, seats),
-    info.spectators ? el("p", {}, `${info.spectators} watching.`) : null,
-    ...ownerTools,
+    notice,
+    el("div", { class: "lobby" }, owner ? [invite, seatsPane] : [seatsPane, invite]),
+    next,
     s.status,
-    el("div", { class: "row" }, el("button", { type: "button", onclick: () => leave() }, "Leave the room")),
+    el("div", { class: "row" }, el("button", { type: "button", onclick: leaveRoom }, "Leave the room")),
   );
 }
 
@@ -430,10 +480,13 @@ function drawBar() {
   if (!s?.bar) return;
   const host = s.info?.seats[s.info.host];
   const canHost = s.me !== null && s.me !== undefined && s.info && s.info.host !== s.me;
+  // replaceChildren() writes null as the text "null": only real nodes go in.
   s.bar.replaceChildren(
-    el("span", {}, `Room ${s.code}. Host: ${host ? seatName(host, s.info.host) : "none"}.`),
-    canHost ? el("button", { type: "button", onclick: () => s.room.send({ t: "take-host" }) }, "Make me host") : null,
-    s.status,
+    ...[
+      el("span", {}, `Room ${s.code}. Host: ${host ? seatName(host, s.info.host) : "none"}.`),
+      canHost ? el("button", { type: "button", onclick: () => s.room.send({ t: "take-host" }) }, "Make me host") : null,
+      s.status,
+    ].filter(Boolean),
   );
 }
 
@@ -453,7 +506,7 @@ function feed(msg) {
       seats: s.info.seats.map((x, i) => ({ name: seatName(x, i), kind: x.cpu ? "cpu" : "human" })),
       me: s.me,
       send: sendMove,
-      online: { bar: s.bar, table: s.table, leave: () => window.confirm("Leave this room?") && leave(), actions },
+      online: { bar: s.bar, table: s.table, leave: leaveRoom, actions },
     });
     drawBar();
   }
@@ -470,10 +523,10 @@ function sendMove(msg) {
 /** The result screen's buttons (AC7.1): Rematch for the owner, Scores, back to the room, Leave. */
 function actions() {
   return [
-    s?.owner ? el("button", { type: "button", class: "primary big", onclick: () => s.room.send({ t: "owner", op: "rematch" }) }, "Rematch") : el("p", {}, "The owner can start a rematch."),
+    s?.owner ? el("button", { type: "button", class: "primary big", onclick: () => s.room.send({ t: "owner", op: "rematch" }) }, "Rematch") : el("p", { class: "hint-text" }, "The owner can start a rematch."),
     el("button", { type: "button", onclick: () => showScores(s.g.id, true) }, "Scores"),
     el("button", { type: "button", onclick: () => lobby() }, "Back to the room"),
-    el("button", { type: "button", onclick: () => leave() }, "Leave the room"),
+    el("button", { type: "button", onclick: leaveRoom }, "Leave the room"),
   ];
 }
 
@@ -531,14 +584,16 @@ export async function showScores(id, fromRoom = false) {
   page(
     "Online scores",
     el(
-      "label",
-      { for: "scores-game" },
-      "Game",
-    ),
-    el(
-      "select",
-      { id: "scores-game", onchange: (e) => showScores(e.target.value, fromRoom) },
-      list.map((x) => el("option", { value: x.id, selected: x.id === g.id }, x.name)),
+      "div",
+      { class: "setup" },
+      field(
+        "Game",
+        el(
+          "select",
+          { id: "scores-game", onchange: (e) => showScores(e.target.value, fromRoom) },
+          list.map((x) => el("option", { value: x.id, selected: x.id === g.id }, x.name)),
+        ),
+      ),
     ),
     box,
     el("div", { class: "row" }, back, el("button", { type: "button", onclick: showHub }, "Back to games")),
@@ -559,20 +614,29 @@ export async function showScores(id, fromRoom = false) {
       })
       .join("; ");
   };
+  box.classList.add("score-panes");
   box.replaceChildren(
-    el("h2", {}, `Top players: ${g.name}`),
-    body.top.length
-      ? el(
-          "table",
-          {},
-          el("thead", {}, el("tr", {}, el("th", { scope: "col" }, "Player"), el("th", { scope: "col" }, "Wins"))),
-          el("tbody", {}, body.top.map((r) => el("tr", {}, el("th", { scope: "row" }, r.nick), el("td", {}, r.wins)))),
-        )
-      : el("p", {}, "No online wins yet."),
-    el("h2", {}, "Last matches"),
-    body.recent.length
-      ? el("ul", { class: "recent" }, body.recent.map((m) => el("li", {}, `${when(m.at)}: ${placesText(m)}`)))
-      : el("p", {}, "No online matches yet."),
+    el(
+      "section",
+      { class: "pane", "aria-labelledby": "top-title" },
+      el("h2", { id: "top-title" }, `Top players: ${g.name}`),
+      body.top.length
+        ? el(
+            "table",
+            {},
+            el("thead", {}, el("tr", {}, el("th", { scope: "col" }, "Player"), el("th", { scope: "col" }, "Wins"))),
+            el("tbody", {}, body.top.map((r) => el("tr", {}, el("th", { scope: "row" }, r.nick), el("td", {}, r.wins)))),
+          )
+        : el("p", { class: "hint-text" }, "No online wins yet. Play a match with friends: the winner shows here."),
+    ),
+    el(
+      "section",
+      { class: "pane", "aria-labelledby": "last-title" },
+      el("h2", { id: "last-title" }, "Last matches"),
+      body.recent.length
+        ? el("ul", { class: "recent" }, body.recent.map((m) => el("li", {}, `${when(m.at)}: ${placesText(m)}`)))
+        : el("p", { class: "hint-text" }, "No online matches yet."),
+    ),
   );
 }
 

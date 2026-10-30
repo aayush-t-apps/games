@@ -13,12 +13,17 @@ a laptop, or a TV browser. The one job: pick a game and be playing in two taps, 
 | Setup: seats (you, people, CPUs), CPU level, kid mode | **Start** |
 | Match: the felt table, the players, the moves | play a move |
 | Result: the places | **Play again** |
-| Settings (a bottom sheet on phones): name, kid mode, theme, sound, Export, Import, Install | **Done** |
+| Settings (a bottom sheet on phones): name, kid mode, theme, sound, Install | **Done** |
 | Start a room (members): seats, CPU seats, level | **Start the room** |
 | Join: the room code, or a nickname for a room's link | **Join** (or **Join as Table**) |
-| Lobby (`/r/<code>`): the code large, its QR code, the link, the seats | **Start** (the owner), **Share** (everyone) |
-| Online scores: per game, top players and the last matches | pick a game |
-| Admin (`/admin`): Overview, Games, Rooms, Scores | **Refresh**, **Save**, **Close**, **Export** |
+| Lobby (`/r/<code>`): an Invite panel (the code large, its QR code, the link) and a Seats panel (a row per seat, with owner, host and you tags) | **Start** (the owner), **Share** (everyone) |
+| Online scores: per game, top players and the last matches, in two panels | pick a game |
+| Admin (`/admin`): Overview (fact cards), Games (a list), Rooms, Scores (Export, Restore) | **Refresh**, **Save**, **Close**, **Export** |
+
+The hub's online panel is a strip of felt led by **Join a room**. Forms put each label above its
+full-width field. Panels are cards: surface colour, a 2 px line border and the 10 px radius. Red
+outlines mark what ends something for others (**Close the room**, **Kick**). The admin tables
+scroll inside their own box on a phone and sort by a column head (↕, ↑, ↓).
 
 Online, the match keeps its screen, with a thin bar for the room, its host and **Make me host**. A
 device that joins as the **Table** shows the board large, with no hand and no side panel.

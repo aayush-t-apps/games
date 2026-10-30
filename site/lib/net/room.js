@@ -29,6 +29,15 @@ export function keepToken(code, more, storage = globalThis.sessionStorage) {
   }
 }
 
+/** Forget this tab's tokens for a room, after Leave the room: its seat is someone else's now. */
+export function forgetTokens(code, storage = globalThis.sessionStorage) {
+  try {
+    storage?.removeItem(key(code));
+  } catch {
+    // Storage blocked: nothing was kept.
+  }
+}
+
 /**
  * @param {object} o
  * @param {string} o.code the room code

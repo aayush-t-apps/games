@@ -12,12 +12,18 @@ import {
   checkMove,
   envelope,
   join,
+  leave,
   type Meta,
   matchRecord,
   nextHost,
+  ownerDropped,
+  ownerDue,
   ownerOp,
+  people,
   publicRoom,
   type Snap,
+  takeOwner,
+  upgrade,
   validPlaces,
   type Who,
 } from "../room-logic";
@@ -88,6 +94,15 @@ export class Room extends DurableObject<Env> {
         return this.move(ws, m, who, msg);
       case "take-host":
         return this.takeHost(ws, m, who);
+      case "take-owner": {
+        const why = takeOwner(m, who.seat, this.online());
+        if (why) return this.send(ws, { t: "refused", reason: why });
+        await this.save(m);
+        await this.ctx.storage.setAlarm(alarmAt(m, this.ctx.getWebSockets().length, Date.now()));
+        return this.seats(m);
+      }
+      case "leave":
+        return this.leave(ws, m, who);
       case "owner":
         return this.owner(ws, m, who, msg);
       case "state":
@@ -129,6 +144,10 @@ export class Room extends DurableObject<Env> {
     const now = Date.now();
     const sockets = this.ctx.getWebSockets().length;
     if (now >= m.expires || sockets === 0) return this.end("This room has ended.");
+    if (ownerDue(m, this.online(), now)) {
+      await this.save(m);
+      this.seats(m);
+    }
     await this.ctx.storage.setAlarm(alarmAt(m, sockets, now));
   }
 
@@ -159,6 +178,7 @@ export class Room extends DurableObject<Env> {
     const online = this.online();
     if (seat !== null && (m.host === null || !online.has(m.host) || m.host === seat)) m.host = seat;
     await this.save(m);
+    await this.report(m);
     this.send(ws, {
       t: "welcome",
       seat,
@@ -192,7 +212,8 @@ export class Room extends DurableObject<Env> {
   }
 
   private async owner(ws: WebSocket, m: Meta, who: Who, msg: Out): Promise<void> {
-    if (who.seat !== 0) return this.refuse(ws, "role", "Only the room owner can do that.");
+    if (who.seat !== m.ownerSeat)
+      return this.refuse(ws, "role", "Only the room owner can do that.");
     const done = ownerOp(m, msg, Date.now(), this.online());
     if (!done.ok) return this.send(ws, { t: "refused", reason: done.reason });
     if (done.close) return this.end("The owner closed the room.");
@@ -204,8 +225,26 @@ export class Room extends DurableObject<Env> {
       await this.ctx.storage.delete("snap");
     }
     await this.save(m);
+    if (done.kick !== undefined) await this.report(m);
     if (done.start) await this.handHost(m);
     this.seats(m);
+  }
+
+  /** Leave the room (AC5.5): the seat opens, the owner role passes on, and the socket closes. */
+  private async leave(ws: WebSocket, m: Meta, who: Who): Promise<void> {
+    if (who.seat !== null) {
+      leave(m, who.seat, this.online(ws));
+      await this.save(m);
+      await this.report(m);
+    }
+    await this.left(ws);
+    // A watcher now, so the close that follows changes nothing more.
+    ws.serializeAttachment({ seat: null, table: false });
+    try {
+      ws.close(1000, "left");
+    } catch {
+      // Already closed.
+    }
   }
 
   private async state(ws: WebSocket, m: Meta, msg: Out): Promise<void> {
@@ -251,6 +290,8 @@ export class Room extends DurableObject<Env> {
     if (!m) return;
     const who = ws.deserializeAttachment() as Who | null;
     const online = this.online(ws);
+    const now = Date.now();
+    const sockets = this.ctx.getWebSockets().filter((s) => s !== ws).length;
     if (who?.seat != null && who.seat === m.host && !online.has(who.seat)) {
       const next = nextHost(m, online, who.seat);
       if (next !== null) {
@@ -259,9 +300,26 @@ export class Room extends DurableObject<Env> {
         await this.handHost(m, ws);
       }
     }
+    // The owner's device dropped: its role passes on at the alarm, unless it comes back (AC5.5).
+    // Nobody left: no wait, the room just ends 10 minutes later.
+    const waits = who?.seat === m.ownerSeat && ownerDropped(m, online, now);
+    if (sockets === 0 && m.ownerAway !== null) m.ownerAway = null;
+    if (waits || sockets === 0) {
+      await this.save(m);
+      await this.ctx.storage.setAlarm(alarmAt(m, sockets, now));
+    }
     this.seats(m, ws);
-    const sockets = this.ctx.getWebSockets().filter((s) => s !== ws).length;
-    if (sockets === 0) await this.ctx.storage.setAlarm(alarmAt(m, 0, Date.now()));
+  }
+
+  /** Tell the Hub how many people sit here, only when it changed (the admin's Rooms tab). */
+  private async report(m: Meta): Promise<void> {
+    const n = people(m);
+    if (n === m.reported) return;
+    m.reported = n;
+    await this.save(m);
+    await this.env.HUB.getByName("hub")
+      .seated(m.code, n)
+      .catch(() => {});
   }
 
   // ---------- Helpers ----------
@@ -360,7 +418,10 @@ export class Room extends DurableObject<Env> {
   }
 
   private async load(): Promise<Meta | null> {
-    if (this.meta === undefined) this.meta = (await this.ctx.storage.get<Meta>("meta")) ?? null;
+    if (this.meta === undefined) {
+      const m = await this.ctx.storage.get<Meta>("meta");
+      this.meta = m ? upgrade(m) : null;
+    }
     return this.meta;
   }
 

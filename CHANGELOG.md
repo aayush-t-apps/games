@@ -5,6 +5,32 @@ Versions: [Semantic Versioning](https://semver.org/). Change docs: `docs/changes
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-30
+
+### Added
+
+- Online play is on: the owner's Cloudflare Access values are in the config
+  (docs/changes/0004-owner-role-and-restore.md).
+- The owner role passes on: **Leave the room** opens the seat and gives the controls to the next
+  player; when the owner's device drops, they pass after 2 minutes; **Make me the owner** while
+  the owner is away.
+- `/admin`: the people in each room, tables that sort by column, and **Restore** of all online
+  data to a time in the last 30 days (Cloudflare's point-in-time recovery), with **Undo**.
+
+### Changed
+
+- A cleaner hub, lobby, forms, online scores and admin page on phone and desktop.
+- A request to `localhost` is always the developer, so `make dev` and the tests work with the
+  Access values set.
+
+### Removed
+
+- **Export my data** and **Import a save file** in Settings: a device's own scores stay on it.
+
+### Fixed
+
+- The online match bar showed the word "null".
+
 ## [0.2.0] - 2026-10-31
 
 ### Added
