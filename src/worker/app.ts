@@ -13,6 +13,7 @@ import {
   newCode,
   newToken,
   readJson,
+  restoreRequest,
   roomRequest,
   sameOrigin,
 } from "./checks";
@@ -184,5 +185,24 @@ export const app = createApp<Env>((a) => {
   a.get("/api/admin/export", async (c) => {
     c.header("content-disposition", 'attachment; filename="games-hub.json"');
     return c.json(await hub(c.env).export());
+  });
+
+  // Restore the Hub to a time in the last 30 days, or undo a restore with its bookmark (AC8.8).
+  a.post("/api/admin/restore", async (c) => {
+    const b = await body(c);
+    if (b instanceof Response) return b;
+    const to = restoreRequest(b, Date.now());
+    if (typeof to === "string") return refuse(c, 400, "bad_request", to);
+    let undo: string;
+    try {
+      ({ undo } = await hub(c.env).restore(to));
+    } catch {
+      return refuse(c, 400, "no_restore", "Cloudflare can't restore that point.");
+    }
+    // The restart ends its own call in an error: that's how the Hub starts again.
+    await hub(c.env)
+      .restart()
+      .catch(() => {});
+    return c.json({ undo });
   });
 });

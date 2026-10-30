@@ -8,7 +8,9 @@ import { app, type Env } from "../../src/worker/app";
 type Call = [string, ...unknown[]];
 let calls: Call[];
 let allow: string;
+let restoreFails: boolean;
 
+/** A stand-in object: each call is noted; an answer that's a function runs (it may throw). */
 const stub = (name: string, answers: Record<string, unknown> = {}) =>
   new Proxy(
     {},
@@ -17,7 +19,9 @@ const stub = (name: string, answers: Record<string, unknown> = {}) =>
         (_, method: string) =>
         (...args: unknown[]) => {
           calls.push([`${name}.${method}`, ...args]);
-          return Promise.resolve(method in answers ? answers[method] : null);
+          const answer = answers[method];
+          if (typeof answer === "function") return Promise.resolve().then(answer as () => unknown);
+          return Promise.resolve(method in answers ? answer : null);
         },
     },
   );
@@ -40,6 +44,14 @@ const env = (more: Partial<Env> = {}): Env =>
           stats: { live: [] },
           liveRooms: [],
           export: { format: "games-hub.v1" },
+          restore: () => {
+            if (restoreFails) throw new Error("bad bookmark");
+            return { undo: "before" };
+          },
+          // As ctx.abort() does: the restart's own call fails.
+          restart: () => {
+            throw new Error("restore");
+          },
         }),
     },
     ...more,
@@ -51,6 +63,7 @@ const PUBLIC = "https://games.example";
 beforeEach(() => {
   calls = [];
   allow = "ok";
+  restoreFails = false;
   resetKeys();
 });
 
@@ -241,5 +254,30 @@ describe("members (local developer)", () => {
     expect((await post("/api/admin/rooms/K7M2QX", "", "DELETE")).status).toBe(200);
     expect((await post("/api/admin/rooms/nope", "", "DELETE")).status).toBe(404);
     expect(calls.map((c) => c[0])).toContain("room:K7M2QX.close");
+  });
+
+  it("restores the Hub to a time, then starts it again, and gives the bookmark to undo (AC8.8)", async () => {
+    const at = Date.now() - 60 * 60 * 1000;
+    const res = await post("/api/admin/restore", JSON.stringify({ at }));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ undo: "before" });
+    expect(calls).toEqual([["hub.restore", { at }], ["hub.restart"]]);
+    calls = [];
+    expect((await post("/api/admin/restore", JSON.stringify({ bookmark: "b-1" }))).status).toBe(
+      200,
+    );
+    expect(calls[0]).toEqual(["hub.restore", { bookmark: "b-1" }]);
+  });
+
+  it("refuses a restore out of range, and one Cloudflare can't do", async () => {
+    const res = await post("/api/admin/restore", JSON.stringify({ at: Date.now() + 60_000 }));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ text: "Pick a time in the past." });
+    expect(calls).toEqual([]);
+    restoreFails = true;
+    const bad = await post("/api/admin/restore", JSON.stringify({ bookmark: "nope" }));
+    expect(bad.status).toBe(400);
+    expect(await bad.json()).toMatchObject({ error: "no_restore" });
+    expect(calls.map((c) => c[0])).toEqual(["hub.restore"]);
   });
 });

@@ -12,7 +12,8 @@ export const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS catalog (game TEXT PRIMARY KEY, enabled INTEGER NOT NULL,
     featured INTEGER NOT NULL, sort INTEGER NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS rooms (code TEXT PRIMARY KEY, game TEXT NOT NULL,
-    member TEXT NOT NULL, started INTEGER NOT NULL, expires INTEGER NOT NULL)`,
+    member TEXT NOT NULL, started INTEGER NOT NULL, expires INTEGER NOT NULL,
+    players INTEGER NOT NULL DEFAULT 0)`,
   `CREATE TABLE IF NOT EXISTS matches (id INTEGER PRIMARY KEY, game TEXT NOT NULL,
     at INTEGER NOT NULL, players TEXT NOT NULL, places TEXT NOT NULL, secs INTEGER NOT NULL,
     seats INTEGER NOT NULL, cpu INTEGER NOT NULL, winner TEXT)`,
@@ -24,6 +25,9 @@ const num = (v: SqlValue | undefined) => Number(v ?? 0);
 
 export function migrate(sql: Sql): void {
   for (const statement of SCHEMA) sql(statement);
+  // 0.3.0 added rooms.players: a Hub made by 0.2.x gets the column once (0.2.x code ignores it).
+  if (!sql("PRAGMA table_info(rooms)").some((c) => c.name === "players"))
+    sql("ALTER TABLE rooms ADD COLUMN players INTEGER NOT NULL DEFAULT 0");
 }
 
 /** The admin's switches. A game in the code with no row here is on, not featured. */
@@ -76,18 +80,25 @@ export function unlist(sql: Sql, code: string): void {
   sql("DELETE FROM rooms WHERE code = ?", code);
 }
 
+/** The people seated in a room: the Room says so only when it changes. */
+export function seated(sql: Sql, code: string, players: number): void {
+  sql("UPDATE rooms SET players = ? WHERE code = ?", players, code);
+}
+
 export type LiveRoom = {
   code: string;
   game: string;
   member: string;
   started: number;
   expires: number;
+  players: number;
 };
 
 /** Live rooms, newest first; a row past its end is skipped, in case a room missed its unlist. */
 export function liveRooms(sql: Sql, now: number): LiveRoom[] {
   return sql(
-    "SELECT code, game, member, started, expires FROM rooms WHERE expires > ? ORDER BY started DESC",
+    `SELECT code, game, member, started, expires, players FROM rooms WHERE expires > ?
+     ORDER BY started DESC`,
     now,
   ).map((r) => ({
     code: String(r.code),
@@ -95,6 +106,7 @@ export function liveRooms(sql: Sql, now: number): LiveRoom[] {
     member: String(r.member),
     started: num(r.started),
     expires: num(r.expires),
+    players: num(r.players),
   }));
 }
 

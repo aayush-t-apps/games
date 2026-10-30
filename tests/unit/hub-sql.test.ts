@@ -56,9 +56,28 @@ describe("live rooms", () => {
     expect(hub.allowRoom(sql, room)).toBe("taken");
     hub.setCatalog(sql, [{ game: "memory", enabled: false, featured: false, sort: 0 }]);
     expect(hub.allowRoom(sql, { ...room, code: "BBBBBB", game: "memory" })).toBe("off");
+    hub.seated(sql, "AAAAAA", 3);
     expect(hub.liveRooms(sql, NOW)).toEqual([
-      { code: "AAAAAA", game: "ludo", member: "ana@example.com", started: NOW, expires: NOW + DAY },
+      {
+        code: "AAAAAA",
+        game: "ludo",
+        member: "ana@example.com",
+        started: NOW,
+        expires: NOW + DAY,
+        players: 3,
+      },
     ]);
+  });
+
+  it("adds the players column to a Hub that 0.2.x made, once", () => {
+    const db = new DatabaseSync(":memory:");
+    const old: hub.Sql = (query, ...bindings) => db.prepare(query).all(...bindings) as hub.Row[];
+    old(`CREATE TABLE rooms (code TEXT PRIMARY KEY, game TEXT NOT NULL, member TEXT NOT NULL,
+      started INTEGER NOT NULL, expires INTEGER NOT NULL)`);
+    old("INSERT INTO rooms VALUES ('AAAAAA', 'ludo', 'a@b.c', 1, ?)", NOW + DAY);
+    hub.migrate(old);
+    hub.migrate(old);
+    expect(hub.liveRooms(old, NOW)[0]?.players).toBe(0);
   });
 
   it("skips and clears rooms past their end, and unlists", () => {

@@ -102,6 +102,29 @@ export function catalogUpdate(body: unknown): CatalogRow[] | string {
   return rows;
 }
 
+/** How far back Cloudflare keeps the Hub's history (point-in-time recovery). */
+export const RESTORE_DAYS = 30;
+const DAY = 24 * 60 * 60 * 1000;
+
+export type RestoreRequest = { at: number } | { bookmark: string };
+
+/**
+ * A restore of the Hub (AC8.8): `{at}`, a time in ms within the last 30 days and not in the
+ * future, or `{bookmark}`, the one an earlier restore gave to undo it; or the reason it's refused.
+ */
+export function restoreRequest(body: unknown, now: number): RestoreRequest | string {
+  const b = (body ?? {}) as Record<string, unknown>;
+  if (typeof b.bookmark === "string")
+    return /^[\w-]{1,256}$/.test(b.bookmark) ? { bookmark: b.bookmark } : "Unknown bookmark.";
+  const at = b.at;
+  if (!Number.isInteger(at)) return "Pick a date and time.";
+  if ((at as number) > now) return "Pick a time in the past.";
+  // A minute's margin, so a time picked on the page as "30 days ago" still works.
+  if ((at as number) < now - RESTORE_DAYS * DAY + 60_000)
+    return `Cloudflare keeps the last ${RESTORE_DAYS} days.`;
+  return { at: at as number };
+}
+
 /** A write or a WebSocket must come from this app's own pages. */
 export function sameOrigin(req: Request): boolean {
   const origin = req.headers.get("origin");
