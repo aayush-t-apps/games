@@ -1,6 +1,6 @@
 {
   "name": "games",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "description": "A public hub of six classic card, board and kids' games that anyone plays in a browser or as an installed app, solo against the CPU or pass-and-play, offline, or in online rooms that members start and anyone joins by link or code, with shared scores.",

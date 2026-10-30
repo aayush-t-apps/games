@@ -10,7 +10,7 @@ a laptop, or a TV browser. The one job: pick a game and be playing in two taps, 
 | Screen | Primary action |
 |---|---|
 | Hub: the shelf of six games, offline, scores, install | **Play** (one per game) |
-| Setup: seats (you, people, CPUs), CPU level, kid mode | **Start** |
+| Setup: How to play, seats (you, people, CPUs), CPU level, kid mode | **Start** |
 | Match: the felt table, the players, the moves | play a move |
 | Result: the places | **Play again** |
 | Settings (a bottom sheet on phones): name, kid mode, theme, sound, Install | **Done** |
@@ -71,9 +71,18 @@ Targets are 44 px, 56 px in kid mode. Cards size to the table with container que
 
 ## The one memorable element
 
-Big, crisp cards and pieces, drawn by code in SVG, that move with a short slide: a played card
-slides onto the pile, a disc drops down its column, a Memory tile flips, a Ludo token slides to its
-square. Everything else stays quiet: flat colour, no shadows, no gradients.
+Big, crisp cards and pieces, drawn by code in SVG, that move with a short slide: a match's first
+cards, tiles or answers are dealt in one after another, a played card slides onto the pile, a card
+you draw or get slides into your hand, a disc drops down its column, a Memory tile flips and a
+found pair glows as it leaves, a Ludo token slides to its square and a captured one flies back to
+its base, the die rolls, a winning Four in a Row line shines. Everything else stays quiet: flat
+colour, no shadows, no gradients.
+
+Three small cues keep a match alive: a paper pill at the top of the board says whose turn it is
+when the turn passes to a person (about 1.4 s, never in the way of a tap); a CPU on its turn has
+three moving dots in its chip; at the end, the result sits in a pill in the middle of the board
+for 1.5 s, with a short burst of flat confetti (red, blue, yellow, green) for a win, before the
+Result screen. Setup has a felt **How to play** card, open until a game's first finished match.
 
 ## States
 
@@ -94,4 +103,4 @@ square. Everything else stays quiet: flat colour, no shadows, no gradients.
   mode?), so your scores won't be kept."
 - **An old browser:** "Please update your browser to play."
 
-Motion follows `prefers-reduced-motion`: with it, nothing animates.
+Motion follows `prefers-reduced-motion`: with it, nothing animates (the banners still show and go).

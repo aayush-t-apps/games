@@ -5,6 +5,20 @@ Versions: [Semantic Versioning](https://semver.org/). Change docs: `docs/changes
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-30
+
+### Added
+
+- Games that feel alive (docs/changes/0005-games-feel-alive.md): a banner says whose turn it is; a
+  CPU shows thinking dots; a **How to play** card on Setup, open on a game's first play; the result
+  shows over the board, with confetti for a win, before the Result screen.
+
+### Changed
+
+- More motion on the table: the deal, a card into your hand, a Ludo token sliding to its square
+  and a captured one back to base, the die rolling, a Memory pair leaving, a Go Fish book, the
+  winning Four in a Row line. Off with the device's reduced-motion setting.
+
 ## [0.3.0] - 2026-10-30
 
 ### Added
