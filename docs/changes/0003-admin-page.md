@@ -3,7 +3,7 @@ change: 3
 app: games
 title: "Admin page: overview, games, rooms and scores"
 bump: minor
-released: null
+released: v0.2.0
 task: aayush-t-apps/shipify#616
 ---
 

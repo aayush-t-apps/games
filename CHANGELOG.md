@@ -5,6 +5,8 @@ Versions: [Semantic Versioning](https://semver.org/). Change docs: `docs/changes
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-31
+
 ### Added
 
 - Online rooms (docs/changes/0002-online-rooms.md): members sign in with Cloudflare Access and

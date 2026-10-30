@@ -3,7 +3,7 @@ change: 2
 app: games
 title: "Online rooms for members, guest join and shared scores"
 bump: minor
-released: null
+released: v0.2.0
 task: aayush-t-apps/shipify#616
 ---
 
