@@ -13,6 +13,9 @@
     "id": "site",
     "version": "1.0.0"
   },
+  "options": [
+    "do"
+  ],
   "staging": false,
   "service": null,
   "repository": {
@@ -27,7 +30,9 @@
     "deploy": [
       "CLOUDFLARE_API_TOKEN"
     ],
-    "runtime": []
+    "runtime": [
+      "ADMIN_EMAIL"
+    ]
   },
   "vars": [
     "CLOUDFLARE_ACCOUNT_ID",
