@@ -1,0 +1,21 @@
+// Cloudflare Worker config. Production is the top level; staging (if enabled) is env.staging.
+// Files in ./site are served for free; Worker code runs only for run_worker_first paths.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "games",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-09-01",
+  "workers_dev": true,
+  // Previews are made only when a PR asks (its label "preview"): the pipeline turns them on for it.
+  // Deploys keep them off, and closing the PR turns them off again.
+  // No staging: PR previews are versions of this Worker, so an app that keeps data gets none.
+  "preview_urls": false,
+  "assets": {
+    "directory": "./site",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/health", "/.well-known/shipify.json", "/api/*"]
+  },
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+  "vars": { "APP_ID": "games", "APP_ENV": "production", "GIT_SHA": "dev" }
+}
