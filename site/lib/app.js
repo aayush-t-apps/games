@@ -880,7 +880,8 @@ function finish(m, places) {
   const me = m.online ? m.shown : 0;
   const place = 1 + places.findIndex((group) => group.includes(me));
   const solo = m.seats.length === 1;
-  const won = solo || (places[0].includes(me) && places[0].length === 1);
+  // In a game of pairs (`teams`), a shared first place is a win for both partners.
+  const won = solo || (places[0].includes(me) && (places[0].length === 1 || (Boolean(m.rules.teams) && places.length > 1)));
   if (!m.online)
     store.record({ game: m.g.id, level: m.level, won, place: places.slice(0, place - 1).flat().length + 1, at: new Date().toISOString() });
   const firsts = places[0].map((i) => m.names[i]);

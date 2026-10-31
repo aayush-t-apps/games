@@ -85,6 +85,24 @@
     ]
   },
   {
+    "id": "card-lines",
+    "name": "Card Lines",
+    "type": "board",
+    "players": [2, 4],
+    "cpu": true,
+    "ages": "7+",
+    "teaching": true,
+    "version": 1,
+    "kb": 19,
+    "about": "Play a card, put a chip on its square, make lines of five. Jacks are wild. Four play in pairs.",
+    "how": [
+      "Tap a card in your hand. Its squares glow: tap one to put your chip there.",
+      "Five chips in a row make a line; corners count for all. Two players need two lines, three need one.",
+      "Four play in pairs (1 and 3 against 2 and 4), with a colour a pair, and need two lines.",
+      "Two-eyed jacks (♦ ♣) go anywhere; one-eyed jacks (♠ ♥) take a chip off. Dead card? Tap to trade it."
+    ]
+  },
+  {
     "id": "quiz-race",
     "name": "Quiz Race",
     "type": "kids",

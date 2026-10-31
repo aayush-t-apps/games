@@ -1,7 +1,8 @@
 # Games
 
-Six classic games for any device: Crazy Eights, Go Fish, Memory, Ludo, Four in a Row and Quiz
-Race. Play against the CPU (easy, normal or hard), or pass-and-play with family on one phone or
+Seven classic games for any device: Crazy Eights, Go Fish, Memory, Ludo, Four in a Row, Card
+Lines (play a card, put a chip on its square, make lines of five; 2 to 4 players, four in pairs)
+and Quiz Race. Play against the CPU (easy, normal or hard), or pass-and-play with family on one phone or
 tablet. Two puzzles to play alone: Sudoku (Easy to Expert) and Crossword (today's, or a topic). It works offline, installs like an app, and has a kid mode with hints and undo. Your own
 scores stay in your browser. Play with friends on their own devices in an online room: members
 start rooms, and anyone joins with the link, the code or the QR code, with no sign-in.

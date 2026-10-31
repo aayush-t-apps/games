@@ -5,6 +5,14 @@ Versions: [Semantic Versioning](https://semver.org/). Change docs: `docs/changes
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-31
+
+### Added
+
+- Card Lines, a Sequence-style card-and-board game for 2 to 4 players (four play in pairs): pick a
+  card and its squares glow, make lines of five, jacks are wild or take a chip, dead cards trade
+  in; CPU on easy, normal and hard (docs/changes/0007-card-lines.md).
+
 ## [0.5.0] - 2026-10-31
 
 ### Added

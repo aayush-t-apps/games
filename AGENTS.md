@@ -1,6 +1,6 @@
 # Games: agent guide
 
-A public hub of six classic card, board and kids' games and two puzzles (Sudoku, Crossword) that anyone plays in a browser or as an installed app, solo against the CPU or pass-and-play, offline, or in online rooms that members start and anyone joins by link or code, with shared scores.
+A public hub of seven classic card, board and kids' games and two puzzles (Sudoku, Crossword) that anyone plays in a browser or as an installed app, solo against the CPU or pass-and-play, offline, or in online rooms that members start and anyone joins by link or code, with shared scores.
 
 A Shipify **app** (stack `ts-static` 1.2.0, on Cloudflare Workers). It installs, runs,
 tests and deploys on its own through `make`.

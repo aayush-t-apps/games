@@ -7,6 +7,7 @@ const GAMES = [
   "Memory",
   "Ludo",
   "Four in a Row",
+  "Card Lines",
   "Quiz Race",
   "Sudoku",
   "Crossword",
@@ -27,15 +28,34 @@ const turn = (page: Page) => page.locator("#turn");
 const freeColumn = (page: Page) =>
   page.getByRole("button", { name: /^Column \d, \d free$/ }).first();
 
-test("the hub lists the eight games with their type, players and ages (AC1.1)", async ({
-  page,
-}) => {
+test("the hub lists the nine games with their type, players and ages (AC1.1)", async ({ page }) => {
   await open(page);
   const boxes = page.locator(".shelf > li");
   await expect(boxes.locator("h2")).toHaveText(GAMES);
   await expect(boxes.first()).toContainText("Cards. 2–6 players. Ages 6+.");
   await expect(boxes.nth(2)).toContainText("Kids. 1–4 players. Ages 3+.");
-  await expect(boxes.nth(6)).toContainText("Puzzle. 1 player. Ages 8+.");
+  await expect(boxes.nth(7)).toContainText("Puzzle. 1 player. Ages 8+.");
+});
+
+test("Card Lines: a picked card's squares glow, a tap puts a chip there, and the CPU plays (change 0007)", async ({
+  page,
+}) => {
+  await open(page);
+  await setup(page, "Card Lines");
+  await page.getByRole("button", { name: "Start" }).click();
+  await expect(page.locator("#board .cl-cell")).toHaveCount(100);
+  await expect(turn(page)).toHaveText("Your turn");
+  // A card that isn't a jack: its open squares glow, and a tap on one plays it.
+  const card = page.locator(".card-btn:not([aria-label*='jack']):not(.dead)").first();
+  await card.click();
+  await expect(card).toHaveAttribute("aria-pressed", "true");
+  const spot = page.locator(".cl-cell.spot").first();
+  await expect(spot).toBeVisible();
+  await spot.click();
+  await expect(page.locator("#live")).toHaveText(/^Player played .+ on row \d+, column \d+/);
+  await expect(page.locator(".cl-cell[aria-label*='Blue chip']")).toHaveCount(1);
+  await expect(page.locator("#live")).toHaveText(/^CPU 1 (played|took|traded)/);
+  await expect(turn(page)).toHaveText("Your turn");
 });
 
 test("Back goes one screen back, asks before it leaves a match, and stays in the app (AC10.1)", async ({
@@ -186,7 +206,7 @@ test("plays offline after Download all (AC3.1, AC3.2)", async ({ page, context }
   await expect(page.locator(".shelf h2")).toHaveText(GAMES);
   await expect(page.getByText("Needs signal once").filter({ visible: true })).toHaveCount(0);
   const plays = page.getByRole("button", { name: /^Play / });
-  await expect(plays).toHaveCount(8);
+  await expect(plays).toHaveCount(9);
   for (const play of await plays.all()) await expect(play).toBeEnabled();
   await setup(page, "Memory");
   await page.getByRole("button", { name: "Start" }).click();
