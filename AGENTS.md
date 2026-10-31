@@ -1,6 +1,6 @@
 # Games: agent guide
 
-A public hub of six classic card, board and kids' games that anyone plays in a browser or as an installed app, solo against the CPU or pass-and-play, offline, or in online rooms that members start and anyone joins by link or code, with shared scores.
+A public hub of six classic card, board and kids' games and two puzzles (Sudoku, Crossword) that anyone plays in a browser or as an installed app, solo against the CPU or pass-and-play, offline, or in online rooms that members start and anyone joins by link or code, with shared scores.
 
 A Shipify **app** (stack `ts-static` 1.2.0, on Cloudflare Workers). It installs, runs,
 tests and deploys on its own through `make`.
@@ -52,7 +52,9 @@ and touches no page, network, clock or `Math.random`; only `store.js` touches `l
 (the interface in `docs/spec.md`) and `view.js`; a line in `site/games/index.json`, its `kb` the
 folder's size in KB rounded up; and the shared tests in `tests/unit/games.test.ts` (add it to
 `GAMES`): 200 CPU matches with legal moves to an end, the same match for the same seed, a hard CPU
-move under 100 ms, a refused move with a reason, and only what each seat may see.
+move under 100 ms, a refused move with a reason, and only what each seat may see. A one-player
+puzzle says `puzzle: true` in its rules, `cpu: false` and a `pick` in `index.json` (its levels or
+topics, passed to `init(seats, seed, pick)`), and its `ai` is the next right step (the Hint).
 
 **Every release:** set `VERSION` in `site/sw.js` to `shipify.json`'s version (a unit test checks
 it), so players get the new release. A new file in `site/lib/` or `site/icons/` goes in its `SHELL`

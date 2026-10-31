@@ -2,7 +2,7 @@
 
 Six classic games for any device: Crazy Eights, Go Fish, Memory, Ludo, Four in a Row and Quiz
 Race. Play against the CPU (easy, normal or hard), or pass-and-play with family on one phone or
-tablet. It works offline, installs like an app, and has a kid mode with hints and undo. Your own
+tablet. Two puzzles to play alone: Sudoku (Easy to Expert) and Crossword (today's, or a topic). It works offline, installs like an app, and has a kid mode with hints and undo. Your own
 scores stay in your browser. Play with friends on their own devices in an online room: members
 start rooms, and anyone joins with the link, the code or the QR code, with no sign-in.
 
@@ -10,11 +10,11 @@ Open **https://games.app.a69x.in**.
 
 ## Play online
 
-1. A member (signed in with **Sign in to invite friends** on the games page) taps **Invite
-   friends** on a game, types their name, picks the seats (CPU seats too) and taps **Start the
-   room**.
+1. A member (signed in with **Sign in to invite friends** in Settings; the top bar then says
+   **Member**) taps **Play** on a game, then **Invite friends** under **Play with friends**, types
+   their name, picks the seats (CPU seats too) and taps **Start the room**.
 2. Share the room: show its QR code, read out its 6-letter code, or tap **Share** (or **Copy
-   link**). Friends open the link, or type the code under **Play with friends** on the games page
+   link**). Friends open the link, or type the code under **Join friends** on the games page
    and tap **Join**, then type a nickname.
    A TV or a big screen can tap **Join as Table** to show the board to everyone.
 3. The room's owner taps **Start**. The owner's device runs the match. If it drops, the next
@@ -44,7 +44,8 @@ why are in `docs/adr/0001-members-sign-in-with-access.md`, Setup. To do it again
    tag** into `wrangler.jsonc` (`ACCESS_TEAM`, `ACCESS_AUD`). They aren't secret.
 4. GitHub: **games → Settings → Secrets and variables → Actions → New repository secret**:
    `ADMIN_EMAIL`, the email you sign in with. The next deploy takes it.
-5. Check: open `/member` and sign in: the hub shows **Invite friends** on each game, and `/admin`
+5. Check: open `/member` and sign in: the top bar says **Member**, a game's Setup has **Invite
+   friends**, and `/admin`
    opens. In a private window, `/` shows no sign-in.
 
 **Add or remove a member:** edit the policy's emails in Cloudflare (about a minute). The **Members**

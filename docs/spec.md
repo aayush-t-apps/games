@@ -7,7 +7,7 @@
 
 A game room for family, kids and friends at `games.app.a69x.in`. Anyone opens it in a browser on a
 phone, tablet, laptop or TV, or installs it as an app, and plays six classic games solo against the
-CPU or pass-and-play on one device, offline. Kid mode teaches. Scores stay in that browser. Members
+CPU or pass-and-play on one device, offline, and two puzzles (Sudoku, Crossword). Kid mode teaches. Scores stay in that browser. Members
 (signed in with Cloudflare Access) start online rooms; anyone joins one by link, code or QR code
 with a nickname, from any device, and the online scores are shared. The owner runs it from
 `/admin`. This is the [games plan v5][p] (task #613), tasks 1 and 3.
@@ -26,8 +26,9 @@ the rules), counting solo play on the server.
 
 - **US1 (P1): Play a game against the CPU**. As anyone, I want to pick a game and play it against
   CPU players, so that I can play alone on any device.
-  - AC1.1 WHEN I open `/` THE APP SHALL list the six games (Crazy Eights, Go Fish, Memory, Ludo,
-    Four in a Row, Quiz Race) from `site/games/index.json`, each with its type, players and ages.
+  - AC1.1 WHEN I open `/` THE APP SHALL list the eight games (Crazy Eights, Go Fish, Memory, Ludo,
+    Four in a Row, Quiz Race, Sudoku, Crossword) from `site/games/index.json`, each with its type,
+    players and ages.
   - AC1.2 WHEN I start a game with 1 human and 1–5 CPU seats (within the game's player range) and a
     level (easy, normal, hard) THE APP SHALL play the match to the end, with CPU moves after a short
     pause, and show the places.
@@ -76,10 +77,10 @@ the rules), counting solo play on the server.
     name; the hub asks no name first.
 - **US5 (P1): Start an online room (members)**. As a member, I want to start a room and share it,
   so that people on other devices play with me.
-  - AC5.1 WHEN I open the hub THE APP SHALL show a **Play with friends** panel with a room-code
-    field and **Join** for anyone, and, when I am not signed in, a **Sign in to invite friends**
-    link; WHEN I sign in at `/member` (Access) THE APP SHALL bring me back to the hub with
-    **Invite friends** on each game that is on. A guest never has to sign in.
+  - AC5.1 WHEN I open the hub THE APP SHALL show a **Join friends** panel with a room-code field
+    and **Join** for anyone; Settings has **Sign in to invite friends** when I am not signed in;
+    WHEN I sign in at `/member` (Access) THE APP SHALL bring me back to the hub, and each game's
+    Setup has **Invite friends** (AC10.4). A guest never has to sign in.
   - AC5.2 WHEN I start a room (2–8 seats in the game's range, CPU seats and level) THE APP SHALL
     give a 6-letter code (31 letters, no look-alikes), the link `/r/<code>`, its QR code, and
     **Copy link** (or **Share**).
@@ -145,6 +146,29 @@ the rules), counting solo play on the server.
   board while phones hold the hands, so that everyone watches one table.
   - AC9.1 WHEN I join a room as **Table** THE APP SHALL take no seat and show the public view large
     to the end of the match.
+- **US10 (P1): Find my way** (change 0006). As a player, I want the app to move like an app and say
+  who I am, so that I never get lost or wonder whether I'm signed in.
+  - AC10.1 WHEN I press Back (browser or phone) THE APP SHALL go one screen back (match → Setup →
+    hub) and leave the app only from the hub; WHEN a match is in play it SHALL ask "Leave this
+    match?" first, and No keeps the match. **Back to games** goes back through the same history.
+  - AC10.2 WHEN online play is set up THE APP SHALL show my name and **Member** or **Guest** on the
+    top bar's Settings button; Settings says how I'm signed in, with **Sign in to invite friends**
+    or **Sign out** (and **Admin** for the owner).
+  - AC10.3 WHEN I set up a local match THE APP SHALL show each other seat as **CPU** or **Person
+    here** (pass-and-play on this device), and the CPU level only when a CPU plays.
+  - AC10.4 WHEN I open Setup for a game of 2 or more players THE APP SHALL show **Play with
+    friends**: **Invite friends** for a member; for a guest, join by code on the hub or sign in;
+    offline, "Offline: play against the CPU, or pass this device".
+- **US11 (P2): Puzzles to master** (change 0006). As a player, I want Sudoku and a crossword to play
+  alone at my level, so that I get better at them.
+  - AC11.1 WHEN I start Sudoku at Easy, Medium, Hard or Expert THE APP SHALL give a grid with one
+    solution, graded by what it takes to solve (Easy: naked singles; Medium: hidden singles too;
+    Hard and Expert: more, with fewer givens), with notes, Erase, repeats in red and a mistakes count.
+  - AC11.2 WHEN I start Crossword with **Today's puzzle** THE APP SHALL give every device the same
+    grid that day; WHEN I pick a topic (Animals, Food, World, Science, Sports, Music, films and
+    books, Words, or A mix) it SHALL build a new grid from that topic's words and clues.
+  - AC11.3 WHEN I play a puzzle THE APP SHALL show **Hint** (one right step) and **Undo**, keep the
+    score under its pick (a level or a topic), and say "Solved!" at the end.
 
 ## UI
 
@@ -160,17 +184,23 @@ Design brief (`DESIGN.md`), in short:
   rattle, a capture, a token home, a card, a disc), from each view's optional `sound(move, note)`.
 - **Brand:** the logo is a card and a red die on felt (`site/icons/icon.svg`, no text), in the top
   bar beside "Games" and as the app's icons.
+- **Top bar:** the logo and "Games" (to the hub), the Offline mark, and the Settings button with
+  the device's name and a **Member** or **Guest** tag (when online play is set up).
 - **Screens (one primary action each):** Hub ("Pick a game", no question first; **Play**), Setup
-  (How to play, seats, CPU level, kid mode; **Start**), Match (the board, a turn banner, a CPU's
-  thinking dots; play a move; a result banner at the end), Result (places; **Play again**),
-  Settings (name, kid mode, theme, sound, Download all for offline, Install).
-- **Online screens** (`site/lib/online.js`): the hub's **Play with friends** panel (felt: a
-  room-code field and **Join**, **Sign in to invite friends** or **Invite friends** on each game
-  for a member, **Admin** for the owner), Invite friends (your name, seats, CPU seats, level;
+  (How to play, a puzzle's pick, seats as **CPU** or **Person here**, the CPU level when a CPU
+  plays, kid mode; **Start**; **Play with friends** below), Match (the board, a turn banner, a
+  CPU's thinking dots; play a move; a result banner at the end; Hint and Undo in kid mode and in
+  every puzzle), Result (places; **Play again**), Settings (who you are and Sign in or Sign out,
+  name, kid mode, theme, sound, Download all for offline, Install). Each screen over the hub is a
+  history entry, so Back goes one screen back (AC10.1).
+- **Online screens** (`site/lib/online.js`): the hub's **Join friends** panel (felt: a room-code
+  field and **Join**), Setup's **Play with friends** (felt: **Invite friends** for a member, the
+  sign-in link for a guest, the offline note), Invite friends (your name, seats, CPU seats, level;
   **Start the room**), Join (a room's link: nickname, each label above its field; **Join as Table**
   in its own panel), Lobby (`/r/<code>`:
   an **Invite** panel with the code, QR code, link, **Share** or **Copy link**, and a **Seats**
-  panel with a row per seat and the tags owner, host, you; the owner sees Invite first and has
+  panel with a row per seat, its state in words (Joined, Away, CPU, Waiting for a player; a chime
+  when someone sits down) and the tags owner, host, you; the owner sees Invite first and has
   **Start**, **Lock**, **Make it a CPU**, **Kick**, **Add a seat**, **Close the room**; everyone
   has **Leave the room**; an owner-away notice with **Make me the owner**), Match (as above, with
   a bar: the room, its host, **Make me host**, "Reconnecting…"; no Hint or Undo online), Result
@@ -218,9 +248,11 @@ Every path but `/health`, `/.well-known/shipify.json` and `/api/*` is a file fro
 (`src/worker/app.ts`) answers `/api/*` for online play and the admin page.
 
 **The game interface** (every `site/games/<id>/rules.js`), pure and deterministic, with no DOM or
-network: metadata `{id, name, version, players: {min, max}, hidden, realtime: false}`, and:
+network: metadata `{id, name, version, players: {min, max}, hidden, realtime: false}` (a puzzle
+adds `puzzle: true`), and:
 
-- `init(seats, seed)`: the state for a number of seats. States are plain JSON. Each has `turn` (the
+- `init(seats, seed, pick)`: the state for a number of seats. `pick` is a puzzle's choice from its
+  `index.json` `pick` (a difficulty, a topic); other games ignore it. States are plain JSON. Each has `turn` (the
   seat to move), `moves`, `rng` (the seeded generator, `site/lib/rng.js`) and `note` (the last
   move in words, with `@n` for seat n's name: "@0 played Q♥").
 - `view(state, seat)`: what that seat may see. In a `hidden` game, only its own hand.
@@ -274,7 +306,7 @@ move or the room says it's back (AC6.6).
 The import rule, checked by a unit test: `rules.js` imports only `site/lib/{rng,deck,board}.js`;
 only `store.js` touches `localStorage`.
 
-**The six games** (all `realtime: false`):
+**The eight games** (all `realtime: false`):
 
 | Game | Type | Players | Notes |
 |---|---|---|---|
@@ -284,6 +316,8 @@ only `store.js` touches `localStorage`.
 | Ludo | board | 2–4 | A 6 leaves base, captures, safe squares, a 6 plays again (a third 6 ends the turn), an exact roll to finish; the first with four tokens home wins |
 | Four in a Row | board | 2 | 7×6 grid. The owner's "Connect 4", named generically (no trade names) |
 | Quiz Race | kids | 1–4 | Answer a question (maths made from the seed, or a short JSON pack of kids' facts); right moves you a step on a 10-step track; first home wins. CPU right by level (60, 80, 95 %) |
+| Sudoku | puzzles | 1 | A grid made from the seed with one solution, graded Easy (naked singles), Medium (hidden singles), Hard and Expert (more, fewer givens); notes, repeats in red, a mistakes count. Hint: the next cell a person would find |
+| Crossword | puzzles | 1 | A grid of about 9–12 words built from the seed out of a built-in word bank (Animals, Food, World, Science, Sports, Music, films and books, Words; A mix; Today's: all topics, seeded by the date). Hint: one right letter |
 
 **Offline.** `site/sw.js` holds the app's version (a unit test keeps it equal to `shipify.json`'s),
 so each release installs a new service worker. It precaches the hub shell into a cache named for
@@ -362,7 +396,8 @@ a time, set for the next start, then `ctx.abort()`; it returns the bookmark of n
 Only in the browser, in `localStorage` key `games.v1`: `{player: {id, nick, named}, settings: {kid,
 theme, sound}, scores: {<game>: {<level>: {played, won}}}, recent: [last 20 {game, level, won,
 place, at}]}`, about 5 KB. `named` is false until the first-visit name is saved or skipped. The
-level is `easy`, `normal`, `hard`, or `friends` for a match with no CPU. Scores are seat 1's (the
+level is `easy`, `normal`, `hard`, `friends` for a match with no CPU, or a puzzle's pick
+(`expert`, `today`, `animals`…): any id of `[a-z-]`, up to 16 characters. Scores are seat 1's (the
 device's player); a win is first place alone. What is read back is checked: data of another
 shape starts blank, and only the known fields are kept. A local match in progress isn't
 kept: closing the tab ends it. Online matches aren't in these scores: the Hub keeps them.
@@ -374,7 +409,9 @@ back as it was at any time in the last 30 days (Cloudflare keeps that history). 
 only add; Cloudflare refuses a rollback across them, so a bad release is fixed forward.
 
 `site/games/index.json` lists each game: `id, name, type, players, cpu, ages, teaching, version,
-kb, about, how` (`how`: the 2 to 4 steps of its How to play card). A unit test checks that every folder has an entry, holds only `rules.js` and
+kb, about, how` (`how`: the 2 to 4 steps of its How to play card), and for a puzzle `pick`
+(`label`, `options` as `[id, name]`, and `daily`: the option seeded by the device's date, so
+every device gets the same puzzle that day). A unit test checks that every folder has an entry, holds only `rules.js` and
 `view.js`, and that `kb` matches the folder's size (rounded up).
 
 **The CPU levels.** Four in a Row searches 1, 3 or 6 moves ahead (easy, normal, hard). Memory's CPU
