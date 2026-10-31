@@ -146,11 +146,12 @@ test("a guest gets Join and Sign in; a member gets Invite friends and Sign out (
   await expect(page.getByRole("button", { name: "Invite friends" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Sign in to invite friends" })).toBeVisible();
 
-  // The local developer is a member: Invite friends on a game's Setup, and Sign out in Settings.
+  // The local developer is a member: a reload keeps Setup, which now has Invite friends, and
+  // Settings has Sign out.
   await page.unroute("**/api/member/me");
-  await page.goto("/");
+  await page.reload();
   await expect(page.locator(".me-tag")).toHaveText("Member");
-  await page.getByRole("button", { name: "Play Ludo" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Ludo" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Invite friends" })).toBeVisible();
   await page.getByRole("button", { name: "Settings" }).click();
   await expect(page.getByRole("link", { name: "Sign out" })).toHaveAttribute(

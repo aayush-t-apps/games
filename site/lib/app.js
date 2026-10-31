@@ -200,10 +200,13 @@ function drawMe() {
   const nick = store.get().player.nick;
   const role = net.ready ? (net.member ? "Member" : "Guest") : null;
   button.setAttribute("aria-label", `Settings: ${nick}${role ? `, ${role.toLowerCase()}` : ""}`);
+  // replaceChildren() writes null as the text "null": only real nodes go in.
   button.replaceChildren(
-    el("span", { class: "me-name" }, nick),
-    role ? el("span", { class: `me-tag${net.member ? " member" : ""}` }, role) : null,
-    el("span", { class: "me-gear", "aria-hidden": "true" }, "⚙"),
+    ...[
+      el("span", { class: "me-name" }, nick),
+      role ? el("span", { class: `me-tag${net.member ? " member" : ""}` }, role) : null,
+      el("span", { class: "me-gear", "aria-hidden": "true" }, "⚙"),
+    ].filter(Boolean),
   );
 }
 
