@@ -4,7 +4,8 @@
 export const KEY = "games.v1";
 export const FORMAT = "games.v1";
 export const RECENT = 20;
-export const LEVELS = ["easy", "normal", "hard", "friends"];
+/** A score's level: a CPU level, "friends", or a puzzle's pick ("expert", "animals", "today"). */
+export const LEVEL = /^[a-z][a-z-]{0,15}$/;
 export const THEMES = ["auto", "light", "dark", "contrast"];
 const MAX_NICK = 24;
 
@@ -53,7 +54,7 @@ export function problem(data) {
     if (!isObject(byLevel)) return "The save's scores aren't readable.";
     for (const [level, score] of Object.entries(byLevel))
       if (
-        !LEVELS.includes(level) ||
+        !LEVEL.test(level) ||
         !isObject(score) ||
         !isCount(score.played) ||
         !isCount(score.won) ||
@@ -67,7 +68,8 @@ export function problem(data) {
       !isObject(r) ||
       typeof r.game !== "string" ||
       typeof r.won !== "boolean" ||
-      !LEVELS.includes(r.level) ||
+      typeof r.level !== "string" ||
+      !LEVEL.test(r.level) ||
       typeof r.place !== "number" ||
       typeof r.at !== "string"
     )

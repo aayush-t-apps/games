@@ -4,11 +4,13 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import crazyEights from "../../site/games/crazy-eights/rules.js";
+import crossword from "../../site/games/crossword/rules.js";
 import fourInARow from "../../site/games/four-in-a-row/rules.js";
 import goFish from "../../site/games/go-fish/rules.js";
 import ludo from "../../site/games/ludo/rules.js";
 import memory from "../../site/games/memory/rules.js";
 import quizRace from "../../site/games/quiz-race/rules.js";
+import sudoku from "../../site/games/sudoku/rules.js";
 
 type Move = Record<string, unknown>;
 type State = Record<string, unknown> & { turn: number };
@@ -18,7 +20,8 @@ type Rules = {
   version: number;
   players: { min: number; max: number };
   hidden: boolean;
-  init(seats: number, seed: number): State;
+  puzzle?: boolean;
+  init(seats: number, seed: number, pick?: string): State;
   view(state: State, seat: number | null): Record<string, unknown>;
   legalMoves(state: State, seat: number): Move[];
   apply(state: State, seat: number, move: Move): State;
@@ -26,18 +29,27 @@ type Rules = {
   ai(state: State, seat: number, level: string): Move;
 };
 
-const GAMES = [crazyEights, goFish, memory, ludo, fourInARow, quizRace] as Rules[];
+const GAMES = [
+  crazyEights,
+  goFish,
+  memory,
+  ludo,
+  fourInARow,
+  quizRace,
+  sudoku,
+  crossword,
+] as Rules[];
 const LEVELS = ["easy", "normal", "hard"];
 const SEEDS = 200;
 const DIR = "site/games";
 const same = (a: Move, b: Move) => JSON.stringify(a) === JSON.stringify(b);
 
-/** Play a whole match CPU against CPU; check every move on the way. */
-function play(game: Rules, seed: number) {
+/** Play a whole match CPU against CPU (a puzzle: its hint, move by move); check every move. */
+function play(game: Rules, seed: number, pick?: string) {
   const span = game.players.max - game.players.min + 1;
   const seats = game.players.min + (seed % span);
   const levels = Array.from({ length: seats }, (_, i) => LEVELS[(seed + i) % 3] as string);
-  let state = game.init(seats, seed);
+  let state = game.init(seats, seed, pick);
   const moves: Move[] = [];
   for (let n = 0; n < 5000 && !game.winner(state); n++) {
     const seat = state.turn;
@@ -161,10 +173,11 @@ describe("the game list (AC1.1)", () => {
     kb: number;
     about: string;
     how: string[];
+    pick?: { label: string; daily?: string; options: [string, string][] };
   }[];
   const folders = readdirSync(DIR).filter((f) => statSync(join(DIR, f)).isDirectory());
 
-  it("lists the six games in order, one entry per folder", () => {
+  it("lists the eight games in order, one entry per folder", () => {
     expect(list.map((g) => g.name)).toEqual([
       "Crazy Eights",
       "Go Fish",
@@ -172,8 +185,28 @@ describe("the game list (AC1.1)", () => {
       "Ludo",
       "Four in a Row",
       "Quiz Race",
+      "Sudoku",
+      "Crossword",
     ]);
     expect(list.map((g) => g.id).sort()).toEqual(folders.sort());
+  });
+
+  it("gives each puzzle a pick, and every pick makes a puzzle that can be solved (change 0006)", () => {
+    for (const entry of list) {
+      const rules = GAMES.find((g) => g.id === entry.id) as Rules;
+      expect(Boolean(entry.pick), entry.id).toBe(rules.puzzle === true);
+      if (!entry.pick) continue;
+      expect(entry.players).toEqual([1, 1]);
+      const ids = entry.pick.options.map(([id]) => id);
+      if (entry.pick.daily) expect(ids).toContain(entry.pick.daily);
+      for (const id of ids) {
+        expect(id).toMatch(/^[a-z][a-z-]{0,15}$/);
+        for (const seed of [1, 2, 3]) {
+          const { result } = play(rules, seed, id);
+          expect(result, `${entry.id} ${id} seed ${seed}`).toEqual({ places: [[0]] });
+        }
+      }
+    }
   });
 
   it("matches each game's rules and has its type, players and ages", () => {
@@ -182,9 +215,10 @@ describe("the game list (AC1.1)", () => {
       expect(rules?.name).toBe(entry.name);
       expect(rules?.version).toBe(entry.version);
       expect(entry.players).toEqual([rules?.players.min, rules?.players.max]);
-      expect(["cards", "board", "kids"]).toContain(entry.type);
+      expect(["cards", "board", "kids", "puzzles"]).toContain(entry.type);
       expect(entry.ages).toMatch(/^\d+\+$/);
-      expect(entry.cpu).toBe(true);
+      // A puzzle has no CPU player (its Hint is the CPU's move).
+      expect(entry.cpu).toBe(!rules?.puzzle);
       expect(entry.about.length).toBeGreaterThan(10);
     }
   });

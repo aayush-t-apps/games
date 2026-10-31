@@ -17,10 +17,11 @@ const column = (page: Page, n: number) =>
   page.getByRole("button", { name: new RegExp(`^Column ${n},`) });
 const turn = (page: Page) => page.locator("#turn");
 
-/** A member invites friends to a game: the name is asked there, where others see it. */
+/** A member invites friends from a game's Setup: the name is asked there, where others see it. */
 async function invite(page: Page, nick: string, game: string) {
   await page.goto("/");
-  await page.getByRole("button", { name: `Invite friends: ${game}` }).click();
+  await page.getByRole("button", { name: `Play ${game}` }).click();
+  await page.getByRole("button", { name: "Invite friends" }).click();
   await page.getByLabel("Your name").fill(nick);
   await page.getByRole("button", { name: "Start the room" }).click();
 }
@@ -114,13 +115,13 @@ test("the owner taps Leave: the seat opens and the guest gets the owner's contro
   // Sam owns the room now: the controls, the owner tag, and Ana's seat open.
   await expect(phone.getByRole("button", { name: "Start", exact: true })).toBeVisible();
   await expect(phone.locator(".seat-row", { hasText: "Sam" }).locator(".tag.owner")).toBeVisible();
-  await expect(phone.locator(".seat-row").first()).toContainText("free");
+  await expect(phone.locator(".seat-row").first()).toContainText("Waiting for a player");
   await accessible(phone);
   await desk.context().close();
   await phone.context().close();
 });
 
-test("a guest gets Join and Sign in; a member gets Invite friends and Sign out (AC5.1)", async ({
+test("a guest gets Join and Sign in; a member gets Invite friends and Sign out (AC5.1, AC10.2)", async ({
   page,
 }) => {
   // A signed-out visitor: Access answers the member call with its redirect.
@@ -129,20 +130,29 @@ test("a guest gets Join and Sign in; a member gets Invite friends and Sign out (
   );
   await page.goto("/");
   await expect(page.getByLabel("Room code")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Sign in to invite friends" })).toHaveAttribute(
-    "href",
-    "/member",
-  );
-  await expect(page.getByRole("button", { name: /^Invite friends/ })).toHaveCount(0);
   await page.getByRole("button", { name: "Join", exact: true }).click();
   await expect(page.locator("#join-status")).toHaveText(
     "A room code is 6 letters and digits, like K7M2QX.",
   );
+  // The top bar says who plays here; Settings says how to sign in.
+  await expect(page.locator(".me-tag")).toHaveText("Guest");
+  await page.getByRole("button", { name: "Settings" }).click();
+  await expect(page.getByRole("link", { name: "Sign in to invite friends" })).toHaveAttribute(
+    "href",
+    "/member",
+  );
+  await page.getByRole("button", { name: "Done" }).click();
+  await page.getByRole("button", { name: "Play Ludo" }).click();
+  await expect(page.getByRole("button", { name: "Invite friends" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Sign in to invite friends" })).toBeVisible();
 
-  // The local developer is a member: Invite friends on each game, and Sign out.
+  // The local developer is a member: Invite friends on a game's Setup, and Sign out in Settings.
   await page.unroute("**/api/member/me");
-  await page.reload();
-  await expect(page.getByRole("button", { name: /^Invite friends/ })).toHaveCount(6);
+  await page.goto("/");
+  await expect(page.locator(".me-tag")).toHaveText("Member");
+  await page.getByRole("button", { name: "Play Ludo" }).click();
+  await expect(page.getByRole("button", { name: "Invite friends" })).toBeVisible();
+  await page.getByRole("button", { name: "Settings" }).click();
   await expect(page.getByRole("link", { name: "Sign out" })).toHaveAttribute(
     "href",
     "/cdn-cgi/access/logout",

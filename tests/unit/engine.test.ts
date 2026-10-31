@@ -66,6 +66,19 @@ describe("engine", () => {
     expect(views(1).at(-1)?.legal).toEqual([]);
   });
 
+  it("starts a puzzle with its pick: a difficulty or a topic (change 0006)", () => {
+    const init = vi.fn(race.init);
+    const transport = createLocal([{ name: "P0", kind: "human" }]);
+    createEngine({
+      game: { ...race, init },
+      seats: [{ name: "P0", kind: "human" }],
+      seed: 7,
+      pick: "expert",
+      transport,
+    });
+    expect(init).toHaveBeenCalledWith(1, 7, "expert");
+  });
+
   it("refuses an illegal move with a reason and keeps the state (AC1.5)", () => {
     const { engine, say, lastOf } = setup(["human", "human"]);
     engine.start();

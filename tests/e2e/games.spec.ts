@@ -1,7 +1,16 @@
 // The games end to end, on desktop and phone (plan task T6).
 import { expect, type Page, test } from "@playwright/test";
 
-const GAMES = ["Crazy Eights", "Go Fish", "Memory", "Ludo", "Four in a Row", "Quiz Race"];
+const GAMES = [
+  "Crazy Eights",
+  "Go Fish",
+  "Memory",
+  "Ludo",
+  "Four in a Row",
+  "Quiz Race",
+  "Sudoku",
+  "Crossword",
+];
 
 async function open(page: Page) {
   await page.goto("/");
@@ -18,12 +27,66 @@ const turn = (page: Page) => page.locator("#turn");
 const freeColumn = (page: Page) =>
   page.getByRole("button", { name: /^Column \d, \d free$/ }).first();
 
-test("the hub lists the six games with their type, players and ages (AC1.1)", async ({ page }) => {
+test("the hub lists the eight games with their type, players and ages (AC1.1)", async ({
+  page,
+}) => {
   await open(page);
   const boxes = page.locator(".shelf > li");
   await expect(boxes.locator("h2")).toHaveText(GAMES);
   await expect(boxes.first()).toContainText("Cards. 2–6 players. Ages 6+.");
   await expect(boxes.nth(2)).toContainText("Kids. 1–4 players. Ages 3+.");
+  await expect(boxes.nth(6)).toContainText("Puzzle. 1 player. Ages 8+.");
+});
+
+test("Back goes one screen back, asks before it leaves a match, and stays in the app (AC10.1)", async ({
+  page,
+}) => {
+  await open(page);
+  await setup(page, "Four in a Row");
+  await page.getByRole("button", { name: "Start" }).click();
+  await expect(turn(page)).toHaveText("Your turn");
+  // No: the match stays.
+  page.once("dialog", (d) => d.dismiss());
+  await page.goBack();
+  await expect(turn(page)).toHaveText("Your turn");
+  // Yes: back to Setup, then back to the hub.
+  page.once("dialog", (d) => d.accept());
+  await page.goBack();
+  await expect(page.getByRole("button", { name: "Start" })).toBeVisible();
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "Pick a game" })).toBeVisible();
+  // Forward opens Setup again; Back to games goes back through history.
+  await page.goForward();
+  await expect(page.getByRole("button", { name: "Start" })).toBeVisible();
+  await page.getByRole("button", { name: "Back to games" }).click();
+  await expect(page.getByRole("heading", { name: "Pick a game" })).toBeVisible();
+});
+
+test("Sudoku: pick a difficulty, place a number, and Hint shows a right step (change 0006)", async ({
+  page,
+}) => {
+  await open(page);
+  await setup(page, "Sudoku");
+  await expect(page.getByRole("radio")).toHaveCount(4);
+  await page.getByRole("radio", { name: "Expert" }).check();
+  await expect(page.getByLabel(/^Kid mode/)).toHaveCount(0);
+  await page.getByRole("button", { name: "Start" }).click();
+  await expect(page.locator("#board [data-x]")).toHaveCount(81);
+  await page.getByRole("button", { name: "Hint" }).click();
+  await expect(page.locator("#msg")).toHaveText(/^Try a \d in row \d, column \d\.$/);
+  await expect(page.locator("#board .hint")).toHaveCount(1);
+});
+
+test("Crossword: today's puzzle shows its clue, and Hint gives a letter (change 0006)", async ({
+  page,
+}) => {
+  await open(page);
+  await setup(page, "Crossword");
+  await expect(page.getByRole("radio", { name: "Today's puzzle" })).toBeChecked();
+  await page.getByRole("button", { name: "Start" }).click();
+  await expect(page.locator("#board [data-x]").first()).toBeVisible();
+  await page.getByRole("button", { name: "Hint" }).click();
+  await expect(page.locator("#msg")).toHaveText(/Across|Down/);
 });
 
 test("Four in a Row plays to the end against the CPU and counts the score (AC1.2, AC4.2)", async ({
@@ -63,7 +126,7 @@ test("Go Fish pass-and-play covers the screen between players (AC2.1, AC2.2)", a
   await open(page);
   await setup(page, "Go Fish");
   await page.getByLabel("You", { exact: true }).fill("Ana");
-  await page.getByRole("button", { name: "Make it a person" }).click();
+  await page.getByRole("button", { name: "Person here" }).click();
   await page.getByLabel("Player 2").fill("Sam");
   await page.getByRole("button", { name: "Start" }).click();
 
@@ -123,7 +186,7 @@ test("plays offline after Download all (AC3.1, AC3.2)", async ({ page, context }
   await expect(page.locator(".shelf h2")).toHaveText(GAMES);
   await expect(page.getByText("Needs signal once").filter({ visible: true })).toHaveCount(0);
   const plays = page.getByRole("button", { name: /^Play / });
-  await expect(plays).toHaveCount(6);
+  await expect(plays).toHaveCount(8);
   for (const play of await plays.all()) await expect(play).toBeEnabled();
   await setup(page, "Memory");
   await page.getByRole("button", { name: "Start" }).click();

@@ -1405,6 +1405,86 @@ body[data-layout="desk"] .match.big-table {
   display: none;
 }
 
+/* Who plays here, on the top bar (change 0006): the name, Member or Guest, and Settings. */
+.me {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  max-width: 55vw;
+}
+.me-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.me-tag {
+  font-size: 0.8rem;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+}
+.me-tag.member {
+  background: var(--yellow);
+}
+.account {
+  margin-bottom: 0.75rem;
+}
+.account p {
+  margin: 0 0 0.25rem;
+}
+.account .online-links a {
+  color: var(--focus);
+}
+/* A seat: CPU, or a person here (pass-and-play on this device) */
+.kind {
+  display: inline-flex;
+}
+.kind button {
+  border-radius: 0;
+}
+.kind button:first-child {
+  border-radius: 8px 0 0 8px;
+}
+.kind button:last-child {
+  border-radius: 0 8px 8px 0;
+  border-left: 0;
+}
+.kind button[aria-pressed="true"] {
+  background: var(--text);
+  color: var(--bg);
+}
+/* Setup's Play with friends: other devices join through a room */
+.friends {
+  margin-top: 1.5rem;
+  padding: 1rem clamp(1rem, 3vw, 1.5rem);
+  border-radius: var(--radius);
+  background: var(--felt);
+  color: var(--paper);
+  border-bottom: 5px solid var(--felt-deep);
+}
+.friends h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.2rem;
+}
+.friends p {
+  margin: 0 0 0.5rem;
+}
+:root[data-theme="contrast"] .friends {
+  border: 2px solid #fff;
+}
+.box.type-puzzles .lid {
+  background: var(--red);
+}
+/* The game boxes lift a little under a pointer or a tap */
+.lid {
+  transition: transform 0.15s ease-out;
+}
+.box:hover .lid,
+.box:focus-within .lid {
+  transform: rotate(-4deg) scale(1.06);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

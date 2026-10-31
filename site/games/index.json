@@ -100,5 +100,63 @@
       "A right answer moves you one step along the track.",
       "The first player to reach step 10 wins."
     ]
+  },
+  {
+    "id": "sudoku",
+    "name": "Sudoku",
+    "type": "puzzles",
+    "players": [1, 1],
+    "cpu": false,
+    "ages": "8+",
+    "teaching": true,
+    "version": 1,
+    "kb": 0,
+    "about": "Fill the grid so each row, column and box has 1 to 9 once. Four levels.",
+    "how": [
+      "Tap a square, then a number. Each row, column and 3×3 box holds 1 to 9 once.",
+      "Notes puts small pencil marks. A placed number clears it from the notes around it.",
+      "Red means a repeat. Stuck? Hint shows one right step, and Undo takes a move back."
+    ],
+    "pick": {
+      "label": "Difficulty",
+      "options": [
+        ["easy", "Easy"],
+        ["normal", "Medium"],
+        ["hard", "Hard"],
+        ["expert", "Expert"]
+      ]
+    }
+  },
+  {
+    "id": "crossword",
+    "name": "Crossword",
+    "type": "puzzles",
+    "players": [1, 1],
+    "cpu": false,
+    "ages": "8+",
+    "teaching": true,
+    "version": 1,
+    "kb": 0,
+    "about": "Today's puzzle, or pick a topic. Read the clue and fill in the word.",
+    "how": [
+      "Tap a square. Tap it again to go across or down. The clue shows above the grid.",
+      "Type the letters. A finished word turns green.",
+      "Stuck? Hint gives one right letter."
+    ],
+    "pick": {
+      "label": "Puzzle",
+      "daily": "today",
+      "options": [
+        ["today", "Today's puzzle"],
+        ["mix", "A mix"],
+        ["animals", "Animals"],
+        ["food", "Food"],
+        ["world", "World"],
+        ["science", "Science"],
+        ["sports", "Sports"],
+        ["arts", "Music, films and books"],
+        ["words", "Words"]
+      ]
+    }
   }
 ]

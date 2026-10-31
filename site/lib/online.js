@@ -2,12 +2,12 @@
 // link or code (anyone), the lobby with the code, its QR code and the owner's controls, the match
 // through the room, and the online scores. The host device runs the engine on a local bus and
 // sends each state to the room; every other device shows only the views the room sends it.
-import { gameById, load, onLeave, players, setScreen, show, showHub, showMatch, shownGames, store } from "./app.js";
+import { gameById, home, load, onLeave, players, setScreen, show, showHub, showMatch, shownGames, store } from "./app.js";
 import { createEngine } from "./engine.js";
 import { createLocal } from "./net/local.js";
 import { createRoom, forgetTokens, keepToken, tokens } from "./net/room.js";
 import { qrSvg } from "./qr.js";
-import { announce, el, ordinal } from "./ui.js";
+import { announce, el, ordinal, sound } from "./ui.js";
 
 const LEVELS = { easy: "Easy", normal: "Normal", hard: "Hard" };
 const CPU_PAUSE = 600;
@@ -152,7 +152,7 @@ export function startRoom(g) {
           ),
         ),
       ),
-      el("div", { class: "row" }, el("button", { class: "primary big", type: "submit" }, "Start the room"), el("button", { type: "button", onclick: showHub }, "Back to games")),
+      el("div", { class: "row" }, el("button", { class: "primary big", type: "submit" }, "Start the room"), el("button", { type: "button", onclick: home }, "Back to games")),
       status,
     ),
   );
@@ -417,7 +417,7 @@ function lobby() {
         el("strong", {}, x.taken || x.cpu ? seatName(x, i) : `Seat ${i + 1}`),
         tags.map((t) => el("span", { class: `tag ${t}` }, t)),
       ),
-      el("span", { class: "state" }, { cpu: "CPU", here: "here", away: "away", free: "free" }[state]),
+      el("span", { class: "state" }, { cpu: "CPU", here: "Joined", away: "Away", free: "Waiting for a player" }[state]),
       controls.length ? el("span", { class: "row seat-tools" }, controls) : null,
     );
   });
@@ -445,6 +445,9 @@ function lobby() {
     el("p", { class: "hint-text" }, `Friends scan the code, open the link, or type the code on ${location.host}.`),
   );
   const filled = info.seats.filter((x) => x.taken || x.cpu).length;
+  // Someone sat down: a short chime, as at a real table.
+  if (again && filled > (s.filled ?? filled)) sound("home");
+  s.filled = filled;
   const seatsPane = el(
     "section",
     { class: "pane", "aria-labelledby": "seats-title" },

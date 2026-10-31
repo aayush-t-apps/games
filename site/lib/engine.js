@@ -22,6 +22,7 @@ export const IDLE_MS = 60_000;
  * @param {object} o.game the rules (site/games/<id>/rules.js)
  * @param {{name: string, kind: "human" | "cpu", level?: string}[]} o.seats
  * @param {number} o.seed
+ * @param {string} [o.pick] a puzzle's choice from index.json's `pick` (a difficulty, a topic)
  * @param {{send: Function, onMessage: Function}} o.transport
  * @param {{state: object, seq: number, last: object | null, places: number[][] | null}} [o.from]
  *   a snapshot to go on from, instead of a new match
@@ -34,6 +35,7 @@ export function createEngine({
   game,
   seats,
   seed,
+  pick,
   transport,
   from,
   delay = 500,
@@ -41,7 +43,7 @@ export function createEngine({
   schedule = (fn, ms) => setTimeout(fn, ms),
   cancel = (handle) => clearTimeout(handle),
 }) {
-  let state = from ? from.state : game.init(seats.length, seed);
+  let state = from ? from.state : game.init(seats.length, seed, pick);
   let seq = from?.seq ?? 0;
   let last = from?.last ?? null;
   let places = from?.places ?? null;
