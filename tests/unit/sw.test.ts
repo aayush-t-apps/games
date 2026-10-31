@@ -35,4 +35,35 @@ describe("service worker", () => {
   it("is never cached by the browser, so updates are found", () => {
     expect(readFileSync("site/_headers", "utf8")).toMatch(/\/sw\.js\n\s+Cache-Control: no-cache/);
   });
+
+  it("leaves sign-in and Cloudflare's own paths to the network, so Access can sign a member in", () => {
+    const handlers: Record<string, (event: unknown) => void> = {};
+    const self = {
+      location: { origin: "https://games.example" },
+      addEventListener: (name: string, fn: (event: unknown) => void) => {
+        handlers[name] = fn;
+      },
+    };
+    new Function("self", sw)(self);
+    const answered = (path: string) => {
+      let used = false;
+      handlers.fetch?.({
+        request: { method: "GET", mode: "navigate", url: `https://games.example${path}` },
+        // The cache isn't here in Node: only whether the worker answers counts.
+        respondWith: (answer: Promise<unknown>) => {
+          used = true;
+          answer.catch(() => {});
+        },
+      });
+      return used;
+    };
+    for (const path of [
+      "/cdn-cgi/access/authorized?nonce=1",
+      "/member",
+      "/admin",
+      "/api/member/me",
+    ])
+      expect(answered(path), path).toBe(false);
+    expect(answered("/r/K7M2QX")).toBe(true);
+  });
 });

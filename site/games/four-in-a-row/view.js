@@ -9,6 +9,7 @@ let animated = null;
 export default {
   status: (_view, seat) => ({ text: SEAT_NAMES[seat], color: SEAT_COLORS[seat] }),
   hintText: (move) => `Try column ${move.col + 1}.`,
+  sound: () => "drop",
   render(box, ctx) {
     const { cols, rows, cells, last, line } = ctx.view;
     const legal = new Set(ctx.legal.map((m) => m.col));

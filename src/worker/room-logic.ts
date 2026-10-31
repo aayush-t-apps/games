@@ -413,7 +413,8 @@ export function validPlaces(m: Meta, places: unknown): number[][] | null {
 
 /** The match, as the Hub records it once when it ends (AC7.1). */
 export function matchRecord(m: Meta, places: number[][], now: number): MatchRecord {
-  const players = m.seats.map((s, i) => (s.cpu ? `CPU ${i + 1}` : s.nick));
+  // A player who left mid-match has an open seat with no name: it is recorded as the seat.
+  const players = m.seats.map((s, i) => (s.cpu ? `CPU ${i + 1}` : s.nick || `Seat ${i + 1}`));
   const first = places[0] ?? [];
   const solo = first.length === 1 ? m.seats[first[0] as number] : undefined;
   return {
@@ -424,7 +425,7 @@ export function matchRecord(m: Meta, places: number[][], now: number): MatchReco
     secs: Math.max(0, Math.round((now - (m.started ?? now)) / 1000)),
     seats: m.seats.length,
     cpu: m.seats.filter((s) => s.cpu).length,
-    winner: solo && !solo.cpu ? solo.nick : null,
+    winner: solo && !solo.cpu && solo.nick ? solo.nick : null,
   };
 }
 

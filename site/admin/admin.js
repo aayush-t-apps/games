@@ -119,10 +119,9 @@ function frame(...body) {
 async function open(name) {
   tab = name;
   frame(el("p", { class: "loading", role: "status" }, "Loading…"));
-  if (name === "Overview") return overview();
-  if (name === "Games") return catalogue();
-  if (name === "Rooms") return rooms();
-  return scores(mostPlayed());
+  // No network: say so, rather than "Loading…" for good.
+  const load = name === "Overview" ? overview : name === "Games" ? catalogue : name === "Rooms" ? rooms : () => scores(mostPlayed());
+  return load().catch(() => stop(0));
 }
 
 const mostPlayed = () =>
@@ -224,7 +223,11 @@ async function catalogue() {
   const move = (i, by, focus) => {
     list.splice(i + by, 0, ...list.splice(i, 1));
     draw();
-    document.getElementById(`${focus}-${list[i + by].game}`)?.focus();
+    note.textContent = "Not saved yet.";
+    // At the top or the bottom that arrow is off: the focus goes to the other one.
+    const game = list[i + by].game;
+    const button = document.getElementById(`${focus}-${game}`);
+    (button?.disabled ? document.getElementById(`${focus === "up" ? "down" : "up"}-${game}`) : button)?.focus();
   };
   const check = (r, key, label) =>
     el(
@@ -305,7 +308,9 @@ async function rooms() {
                     "aria-label": `Close room ${r.code}`,
                     onclick: async () => {
                       if (!window.confirm(`Close room ${r.code} on every device?`)) return;
-                      await api(`/api/admin/rooms/${r.code}`, { method: "DELETE" });
+                      const res = await api(`/api/admin/rooms/${r.code}`, { method: "DELETE" }).catch(() => ({ status: 0 }));
+                      if (res.status >= 300 || res.status === 0)
+                        return window.alert(`Room ${r.code} wasn't closed. Check the signal, then try again.`);
                       open("Rooms");
                     },
                   },

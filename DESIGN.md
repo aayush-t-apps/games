@@ -9,18 +9,21 @@ a laptop, or a TV browser. The one job: pick a game and be playing in two taps, 
 
 | Screen | Primary action |
 |---|---|
-| Hub: the shelf of six games, offline, scores, install | **Play** (one per game) |
-| Setup: seats (you, people, CPUs), CPU level, kid mode | **Start** |
+| Hub: "Pick a game", Play with friends, the shelf of six games, scores, install | **Play** (one per game) |
+| Setup: How to play, seats (you, people, CPUs), CPU level, kid mode | **Start** |
 | Match: the felt table, the players, the moves | play a move |
 | Result: the places | **Play again** |
-| Settings (a bottom sheet on phones): name, kid mode, theme, sound, Install | **Done** |
-| Start a room (members): seats, CPU seats, level | **Start the room** |
-| Join: the room code, or a nickname for a room's link | **Join** (or **Join as Table**) |
+| Settings (a bottom sheet on phones): name, kid mode, theme, sound, Download all for offline, Install | **Done** |
+| Invite friends (members): your name, seats, CPU seats, level | **Start the room** |
+| Join (a room's link): a nickname | **Join** (or **Join as Table**) |
 | Lobby (`/r/<code>`): an Invite panel (the code large, its QR code, the link) and a Seats panel (a row per seat, with owner, host and you tags) | **Start** (the owner), **Share** (everyone) |
-| Online scores: per game, top players and the last matches, in two panels | pick a game |
+| Online scores (after an online match): per game, top players and the last matches | pick a game |
 | Admin (`/admin`): Overview (fact cards), Games (a list), Rooms, Scores (Export, Restore) | **Refresh**, **Save**, **Close**, **Export** |
 
-The hub's online panel is a strip of felt led by **Join a room**. Forms put each label above its
+Nothing is asked before the first game: the hub opens on the games. Its **Play with friends**
+panel is a strip of felt with a room-code field and **Join**, and a quiet **Sign in to invite
+friends** link; a member gets **Invite friends** on each game. The brand is the logo, a card and a
+red die on felt with no text, beside "Games" in the wooden bar. Forms put each label above its
 full-width field. Panels are cards: surface colour, a 2 px line border and the 10 px radius. Red
 outlines mark what ends something for others (**Close the room**, **Kick**). The admin tables
 scroll inside their own box on a phone and sort by a column head (↕, ↑, ↓).
@@ -71,14 +74,24 @@ Targets are 44 px, 56 px in kid mode. Cards size to the table with container que
 
 ## The one memorable element
 
-Big, crisp cards and pieces, drawn by code in SVG, that move with a short slide: a played card
-slides onto the pile, a disc drops down its column, a Memory tile flips, a Ludo token slides to its
-square. Everything else stays quiet: flat colour, no shadows, no gradients.
+Big, crisp cards and pieces, drawn by code in SVG, that move with a short slide: a match's first
+cards, tiles or answers are dealt in one after another, a played card slides onto the pile, a card
+you draw or get slides into your hand, a disc drops down its column, a Memory tile flips and a
+found pair glows as it leaves, a Ludo token slides to its square and a captured one flies back to
+its base, the die rolls, a winning Four in a Row line shines. Everything else stays quiet: flat
+colour, no shadows, no gradients.
+
+Three small cues keep a match alive: a paper pill at the top of the board says whose turn it is
+when the turn passes to a person (about 1.4 s, never in the way of a tap); a CPU on its turn has
+three moving dots in its chip; at the end, the result sits in a pill in the middle of the board
+for 1.5 s, with a short burst of flat confetti (red, blue, yellow, green) for a win, before the
+Result screen. Setup has a felt **How to play** card, open until a game's first finished match.
 
 ## States
 
-- **First visit:** "Welcome! What should we call you?" with **Save name** and **Skip** (the name
-  stays "Player").
+- **First visit:** no question: the games. The name is "Player" until one is typed for "You" on
+  Setup, or on Invite friends.
+- **A bad room code:** "A room code is 6 letters and digits, like K7M2QX." under the field.
 - **Loading a game:** "Getting Ludo…".
 - **Offline:** an "Offline" mark in the bar; a game not yet saved says "Needs signal once" and its
   Play button is off.
@@ -94,4 +107,4 @@ square. Everything else stays quiet: flat colour, no shadows, no gradients.
   mode?), so your scores won't be kept."
 - **An old browser:** "Please update your browser to play."
 
-Motion follows `prefers-reduced-motion`: with it, nothing animates.
+Motion follows `prefers-reduced-motion`: with it, nothing animates (the banners still show and go).

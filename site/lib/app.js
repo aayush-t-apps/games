@@ -13,6 +13,7 @@ import { announce, el, fillNames, ordinal, passScreen, setSound, sound } from ".
 const TYPES = { cards: "Cards", board: "Board game", kids: "Kids" };
 const LEVEL_NAMES = { easy: "Easy", normal: "Normal", hard: "Hard" };
 const CPU_PAUSE = 600;
+const CONFETTI = ["red", "blue", "yellow", "green"];
 
 const main = document.getElementById("main");
 export const store = createStore();
@@ -76,69 +77,14 @@ export function showHub() {
   if (ROOM_PATH.test(location.pathname)) history.replaceState(null, "", "/");
   screen = "hub";
   document.title = "Games";
-  const data = store.get();
+  // No questions first: pick a game and play. A name is asked only where others see it.
   show(
-    store.firstVisit ? welcome() : null,
-    el("h1", { class: "hub-title" }, `Pick a game, ${data.player.nick}`),
+    el("h1", { class: "hub-title" }, "Pick a game"),
     el("div", { id: "online-slot" }, onlineSection()),
     el("ul", { class: "shelf" }, games.map(gameBox)),
-    el(
-      "div",
-      { class: "extras" },
-      el(
-        "section",
-        { class: "offline-row", "aria-labelledby": "offline-title" },
-        el("h2", { id: "offline-title" }, "Play with no signal"),
-        el("p", {}, "Each game is saved on this device the first time you open it, or save them all now."),
-        el("button", { type: "button", id: "download-all", onclick: downloadAll }, "Download all for offline"),
-        el("p", { id: "download-status", role: "status" }),
-      ),
-      scoresSection(),
-      installSection(),
-    ),
+    el("div", { class: "extras" }, scoresSection(), installSection()),
   );
   markCached();
-}
-
-function welcome() {
-  const input = el("input", {
-    id: "first-nick",
-    name: "nick",
-    autocomplete: "nickname",
-    maxlength: "24",
-    placeholder: "Player",
-  });
-  const form = el(
-    "form",
-    {
-      class: "welcome",
-      onsubmit: (event) => {
-        event.preventDefault();
-        store.setNick(input.value);
-        showHub();
-      },
-    },
-    el("h2", {}, "Welcome! What should we call you?"),
-    el("label", { for: "first-nick" }, "Your name (you can skip this)"),
-    el(
-      "div",
-      { class: "row" },
-      input,
-      el("button", { class: "primary", type: "submit" }, "Save name"),
-      el(
-        "button",
-        {
-          type: "button",
-          onclick: () => {
-            store.setNick("");
-            showHub();
-          },
-        },
-        "Skip",
-      ),
-    ),
-  );
-  return form;
 }
 
 function gameBox(g) {
@@ -169,41 +115,75 @@ function gameBox(g) {
             {
               type: "button",
               class: "online-play",
-              "aria-label": `Play online: ${g.name}`,
+              "aria-label": `Invite friends: ${g.name}`,
               onclick: () => online().then((o) => o.startRoom(g)),
             },
-            "Play online",
+            "Invite friends",
           )
         : null,
     ),
   );
 }
 
-/** Online play on the hub (AC5.1): sign in, join a room, the online scores. Hidden until set up. */
+export const CODE = /^[A-HJKMNP-Z2-9]{6}$/;
+
+/**
+ * Play with friends (AC5.1): a friend's room code goes straight in here; a member invites from a
+ * game's own button. Hidden until online play is set up, and offline.
+ */
 function onlineSection() {
   if (!net.ready || !navigator.onLine) return null;
+  const input = el("input", {
+    id: "join-code",
+    class: "code-input",
+    autocomplete: "off",
+    autocapitalize: "characters",
+    maxlength: "6",
+    spellcheck: "false",
+    placeholder: "K7M2QX",
+    "aria-describedby": "join-status",
+  });
+  const status = el("p", { id: "join-status", class: "hint-text", role: "status" });
+  const join = (event) => {
+    event.preventDefault();
+    const code = input.value.trim().toUpperCase();
+    if (!CODE.test(code)) {
+      status.textContent = "A room code is 6 letters and digits, like K7M2QX.";
+      return input.focus();
+    }
+    history.pushState(null, "", `/r/${code}`);
+    online().then((o) => o.openRoom(code));
+  };
   return el(
     "section",
     { class: "online-row", "aria-labelledby": "online-title" },
     el(
       "div",
       { class: "online-text" },
-      el("h2", { id: "online-title" }, "Play with friends online"),
+      el("h2", { id: "online-title" }, "Play with friends"),
       el(
         "p",
         {},
         net.member
-          ? "Tap Play online on a game, then share the room's link, code or QR code."
-          : "Got a room code or link from a friend? Join with no sign-in.",
+          ? "Tap Invite friends on a game and share the link. Got a code? Type it here."
+          : "Got a code from a friend? Type it here. No sign-in needed.",
       ),
     ),
     el(
-      "div",
-      { class: "row" },
-      el("button", { type: "button", class: "primary", onclick: () => online().then((o) => o.showJoin()) }, "Join a room"),
-      el("button", { type: "button", onclick: () => online().then((o) => o.showScores()) }, "Online scores"),
-      net.member ? null : el("a", { class: "button", href: "/member" }, "Members: sign in"),
-      net.admin ? el("a", { class: "button", href: "/admin" }, "Admin") : null,
+      "form",
+      { class: "join-form", onsubmit: join },
+      el("label", { for: "join-code", class: "sr-only" }, "Room code"),
+      input,
+      el("button", { type: "submit", class: "primary" }, "Join"),
+      status,
+    ),
+    el(
+      "p",
+      { class: "online-links" },
+      net.member ? null : el("a", { href: "/member" }, "Sign in to invite friends"),
+      net.admin ? el("a", { href: "/admin" }, "Admin") : null,
+      // Access's own sign-out (the service worker leaves /cdn-cgi/ to Cloudflare).
+      net.member ? el("a", { href: "/cdn-cgi/access/logout" }, "Sign out") : null,
     ),
   );
 }
@@ -377,6 +357,15 @@ function showSetup(g, previous) {
         },
         el("h1", {}, g.name),
         el("p", { class: "about" }, g.about),
+        // How to play: open until this device has finished a match of this game.
+        g.how
+          ? el(
+              "details",
+              { class: "how", open: store.totals(g.id).played === 0 },
+              el("summary", {}, "How to play"),
+              el("ol", {}, g.how.map((line) => el("li", {}, line))),
+            )
+          : null,
         el(
           "fieldset",
           {},
@@ -474,6 +463,9 @@ async function startMatch(g, cfg) {
     );
     return;
   }
+  // The name typed for "You" is this device's name from now on (no separate question for it).
+  const mine = (cfg.seats[0].name || "").trim();
+  if (mine && mine !== store.get().player.nick) store.setNick(mine);
   let cpu = 0;
   const level = cfg.kid ? "easy" : cfg.level;
   const seats = cfg.seats.map((s, i) => ({
@@ -665,12 +657,17 @@ async function update(m) {
       m.log.unshift(text);
       say(`${text}.`);
       announce(text);
-      sound(m.seats[v.last.seat].kind === "human" ? "mine" : "move");
+      const own = m.view.sound?.(v.last.move, v.note);
+      sound(own ?? (m.seats[v.last.seat].kind === "human" ? "mine" : "move"));
     }
   }
+  // The turn banner, when the turn passes to a person (the pass screen says it on its own).
+  let flag = !v.places && turn !== m.turnSeen && m.seats[turn].kind === "human";
+  m.turnSeen = turn;
   if (!m.online && !v.places && m.seats[turn].kind === "human") {
     if (m.rules.hidden && m.humans.length > 1 && m.passed !== turn) {
       m.passed = turn;
+      flag = false;
       draw(m, true);
       await passScreen(m.names[turn]);
       if (match !== m) return;
@@ -678,6 +675,26 @@ async function update(m) {
     m.shown = turn;
   }
   draw(m);
+  if (flag) banner(turnText(m, v));
+}
+
+/**
+ * A short banner over the board: whose turn it is, or (`end`) how the match ended, with a burst of
+ * confetti for a win. Screen readers get the same words from the turn line and the live region.
+ */
+function banner(text, end = false, win = false) {
+  document.querySelector(".banner")?.remove();
+  const node = el("p", { class: `banner${end ? " end" : ""}`, "aria-hidden": "true" }, text);
+  if (win)
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * 2 * Math.PI;
+      const far = i % 2 ? 6 : 9;
+      const x = (Math.cos(angle) * far).toFixed(1);
+      const y = (Math.sin(angle) * far * 0.6).toFixed(1);
+      node.append(el("i", { class: "bit", style: `--x:${x}rem;--y:${y}rem;--c:var(--${CONFETTI[i % 4]})` }));
+    }
+  document.querySelector(".match")?.append(node);
+  if (!end) setTimeout(() => node.remove(), 1400);
 }
 
 function turnText(m, v) {
@@ -698,12 +715,18 @@ function draw(m, covered = false) {
   chips.replaceChildren(
     ...m.seats.map((s, i) => {
       const status = m.view.status(v.view, i);
+      // A CPU on its turn shows three dots while it thinks.
+      const thinking = i === v.turn && s.kind === "cpu" && !v.places;
       return el(
         "li",
-        { class: `chip${i === v.turn ? " active" : ""}`, "aria-current": i === v.turn ? "true" : null },
+        {
+          class: `chip${i === v.turn ? " active" : ""}${thinking ? " thinking" : ""}`,
+          "aria-current": i === v.turn ? "true" : null,
+        },
         status.color ? el("span", { class: "dot", style: `background:${status.color}` }) : null,
         el("strong", {}, s.name),
         el("span", {}, status.text),
+        thinking ? el("span", { class: "dots", "aria-hidden": "true" }, el("i"), el("i"), el("i")) : null,
       );
     }),
   );
@@ -718,6 +741,8 @@ function draw(m, covered = false) {
     board.replaceChildren();
     return;
   }
+  const first = !m.dealt;
+  m.dealt = true;
   m.view.render(board, {
     view: v.view,
     legal: v.legal,
@@ -727,9 +752,16 @@ function draw(m, covered = false) {
     kid: m.cfg.kid,
     hint: m.hint,
     layout: layout(),
+    first,
     play: (move) => send(m, { t: "move", seat: m.shown, seq: v.seq, move }),
     say,
   });
+  // The deal: on a match's first look, the cards, tiles or answers come in one after another.
+  if (first)
+    board.querySelectorAll(".hand > *, .memory > *, .answers > *").forEach((n, i) => {
+      n.classList.add("dealt");
+      n.style.setProperty("--i", String(i));
+    });
   refresh(board, m.hint ? board.querySelector(".hint")?.dataset.key : had, Boolean(had) || Boolean(m.hint));
 }
 
@@ -751,14 +783,17 @@ function finish(m, places) {
           : `${firsts.join(" and ")} won`
         : `${firsts.join(" and ")} won!`;
   if (won || m.humans.length > 1) sound("win");
+  // Confetti for a win on this device, or any winner among friends; none for a draw.
+  const cheer = (won || m.humans.length > 1) && (solo || places.length > 1);
   announce(headline);
+  banner(headline, true, cheer);
   setTimeout(() => {
     if (match !== m) return;
     let rank = 1;
     show(
       el(
         "section",
-        { class: "result", "aria-labelledby": "result-title" },
+        { class: `result${cheer ? " won" : ""}`, "aria-labelledby": "result-title" },
         el("h1", { id: "result-title" }, headline),
         el(
           "ol",
@@ -782,7 +817,7 @@ function finish(m, places) {
       ),
     );
     main.querySelector("h1")?.focus();
-  }, 1200);
+  }, 1500);
 }
 
 // ---------- Settings ----------
@@ -841,6 +876,10 @@ function openSettings() {
         }),
         "Sounds",
       ),
+      el("h3", {}, "Play with no signal"),
+      el("p", { class: "hint-text" }, "Each game is saved here the first time you open it, or save them all now."),
+      el("button", { type: "button", id: "download-all", onclick: downloadAll }, "Download all for offline"),
+      el("p", { id: "download-status", role: "status" }),
       store.kept ? null : el("p", { class: "warn" }, "This browser isn't keeping data (private mode?), so your scores won't be kept."),
       install ? el("button", { type: "button", onclick: () => install?.() }, "Install Games") : null,
       el("div", { class: "row" }, el("button", { class: "primary", value: "done" }, "Done")),
@@ -868,8 +907,14 @@ async function startApp() {
   const offline = document.getElementById("offline");
   const signal = () => {
     offline.hidden = navigator.onLine;
+    // The friends panel hides offline and comes back online.
+    if (screen === "hub") document.getElementById("online-slot")?.replaceChildren(...[onlineSection()].filter(Boolean));
   };
-  window.addEventListener("online", signal);
+  window.addEventListener("online", () => {
+    signal();
+    // Opened offline, the member check failed: try again now.
+    checkOnline();
+  });
   window.addEventListener("offline", signal);
   signal();
   document.getElementById("open-settings").addEventListener("click", openSettings);

@@ -3,7 +3,7 @@
 // test checks it): bump it with every release, so the new release installs as a new worker.
 // Online play (change 0002) goes to the network: /api/*, and the sign-in pages /member and /admin,
 // which Cloudflare Access guards. Only /api/catalog is kept, the last one, for offline.
-const VERSION = "0.3.0";
+const VERSION = "0.4.0";
 const CACHE = `games-${VERSION}`;
 const SHELL = [
   "/",
@@ -87,7 +87,9 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname === "/api/catalog") return event.respondWith(catalog(request));
   if (url.pathname === "/health" || url.pathname === "/sw.js" || /^\/(\.well-known|api)\//.test(url.pathname))
     return;
-  if (/^\/(member|admin)(\/|$)/.test(url.pathname)) return;
+  // Sign-in pages, and Cloudflare's own paths: Access's return (/cdn-cgi/access/authorized) must
+  // reach Cloudflare, which sets the sign-in cookie there. From the cache it would never sign in.
+  if (/^\/(member|admin|cdn-cgi)(\/|$)/.test(url.pathname)) return;
   event.respondWith(answer(request, url));
 });
 

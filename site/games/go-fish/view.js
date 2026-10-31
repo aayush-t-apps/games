@@ -4,6 +4,10 @@ import { RANK_NAMES, rank, spoken } from "../../lib/deck.js";
 import { el } from "../../lib/ui.js";
 
 let picked = null;
+// The hand and books at the last draw: cards you get slide in, a new book pops.
+let held = [];
+let booked = 0;
+let heldBy = null;
 const plural = (r) => (r === 6 ? "6s" : `${RANK_NAMES[r]}s`);
 
 export default {
@@ -13,6 +17,7 @@ export default {
     return { text: `${n} ${n === 1 ? "card" : "cards"}, ${b} ${b === 1 ? "book" : "books"}` };
   },
   hintText: (move, _view, names) => `Ask ${names[move.from]} for ${plural(move.rank)}.`,
+  sound: () => "card",
   render(box, ctx) {
     const { hand, counts, books, stock } = ctx.view;
     const ranks = new Set(hand.map(rank));
@@ -59,13 +64,17 @@ export default {
       el("span", { class: "label" }, `Pond: ${stock}`),
     );
     const myBooks = books[ctx.me] ?? [];
+    // A new match, or another player's turn to look (pass-and-play): nothing new yet.
+    if (ctx.first || ctx.me !== heldBy) [held, booked] = [hand, myBooks.length];
+    const got = (card) => (held.includes(card) ? "" : " slide");
+    const newBook = myBooks.length > booked;
     const fan = el(
       "div",
       { class: "hand", role: "group", "aria-label": "Your cards" },
       hand.map((card, i) =>
         el("button", {
           type: "button",
-          class: `card-btn${ctx.kid && ctx.legal.length ? " legal" : ""}${picked === rank(card) ? " picked" : ""}${ctx.hint && ctx.hint.rank === rank(card) && hand.find((c) => rank(c) === rank(card)) === card ? " hint" : ""}`,
+          class: `card-btn${got(card)}${ctx.kid && ctx.legal.length ? " legal" : ""}${picked === rank(card) ? " picked" : ""}${ctx.hint && ctx.hint.rank === rank(card) && hand.find((c) => rank(c) === rank(card)) === card ? " hint" : ""}`,
           dataset: { x: i, y: 1, key: `c${card}` },
           "aria-label": `Ask for ${plural(rank(card))} (${spoken(card)})`,
           "aria-pressed": picked === rank(card) ? "true" : "false",
@@ -81,11 +90,12 @@ export default {
         : [
             el(
               "p",
-              { class: "books" },
+              { class: `books${newBook ? " pop" : ""}` },
               myBooks.length ? `Your books: ${myBooks.map((r) => plural(r)).join(", ")}` : "No books yet. Collect four of a rank.",
             ),
             fan,
           ];
+    [held, booked, heldBy] = [hand, myBooks.length, ctx.me];
     box.replaceChildren(el("div", { class: "table" }, pond, ctx.me === null ? null : asks), ...mine);
   },
 };

@@ -5,8 +5,8 @@ const GAMES = ["Crazy Eights", "Go Fish", "Memory", "Ludo", "Four in a Row", "Qu
 
 async function open(page: Page) {
   await page.goto("/");
-  await page.getByRole("button", { name: "Skip" }).click();
-  await expect(page.getByRole("heading", { name: "Pick a game, Player" })).toBeVisible();
+  // No questions first: the games are right there.
+  await expect(page.getByRole("heading", { name: "Pick a game" })).toBeVisible();
 }
 
 async function setup(page: Page, game: string) {
@@ -32,7 +32,15 @@ test("Four in a Row plays to the end against the CPU and counts the score (AC1.2
   test.setTimeout(120_000);
   await open(page);
   await setup(page, "Four in a Row");
+  // How to play is open on a game's first play, and closed once a match is done (AC4.5).
+  const how = page.locator("details.how");
+  await expect(how).toHaveAttribute("open");
+  await expect(how.locator("li").first()).toHaveText("Tap a column to drop your disc into it.");
   await page.getByRole("button", { name: "Start" }).click();
+  // A banner says whose turn it is, and a CPU shows that it is thinking (AC1.6, AC1.7).
+  await expect(page.locator(".banner")).toHaveText("Your turn");
+  await freeColumn(page).click();
+  await expect(page.locator(".chip.thinking")).toContainText("CPU 1");
   const result = page.getByRole("heading", { level: 1, name: /won|draw/ });
   const yourTurn = turn(page).filter({ hasText: "Your turn" });
   // At most 21 moves are yours; the result screen replaces the match when it ends.
@@ -46,6 +54,8 @@ test("Four in a Row plays to the end against the CPU and counts the score (AC1.2
   await page.getByRole("button", { name: "Choose another game" }).click();
   const row = page.locator(".scores tr", { hasText: "Four in a Row" });
   await expect(row.locator("td").first()).toHaveText("1");
+  await setup(page, "Four in a Row");
+  await expect(how).not.toHaveAttribute("open");
 });
 
 test("Go Fish pass-and-play covers the screen between players (AC2.1, AC2.2)", async ({ page }) => {
@@ -102,8 +112,10 @@ test("plays offline after Download all (AC3.1, AC3.2)", async ({ page, context }
     if (!navigator.serviceWorker.controller)
       await new Promise((r) => navigator.serviceWorker.addEventListener("controllerchange", r));
   });
+  await page.getByRole("button", { name: "Settings" }).click();
   await page.getByRole("button", { name: "Download all for offline" }).click();
   await expect(page.locator("#download-status")).toHaveText("All games ready offline");
+  await page.getByRole("button", { name: "Done" }).click();
 
   await context.setOffline(true);
   await page.reload();
@@ -153,9 +165,20 @@ test("Settings changes the name, kept on this device, with no Export or Import",
   await expect(page.getByRole("button", { name: /Export/ })).toHaveCount(0);
   await expect(page.getByLabel(/Import/)).toHaveCount(0);
   await page.getByRole("button", { name: "Done" }).click();
-  await expect(page.getByRole("heading", { name: "Pick a game, Ana" })).toBeVisible();
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Pick a game, Ana" })).toBeVisible();
+  await setup(page, "Ludo");
+  await expect(page.getByLabel("You", { exact: true })).toHaveValue("Ana");
+});
+
+test("the name typed on Setup is kept for next time", async ({ page }) => {
+  await open(page);
+  await setup(page, "Memory");
+  await page.getByLabel("You", { exact: true }).fill("Sam");
+  await page.getByRole("button", { name: "Start" }).click();
+  await expect(page.locator("#board")).toBeVisible();
+  await page.goto("/");
+  await setup(page, "Ludo");
+  await expect(page.getByLabel("You", { exact: true })).toHaveValue("Sam");
 });
 
 test("shows Install when the browser offers it (AC3.4)", async ({ page }) => {

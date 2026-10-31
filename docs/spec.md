@@ -35,6 +35,12 @@ the rules), counting solo play on the server.
     `legalMoves`, end every match with a winner or a draw, and give the same match for the same seed.
   - AC1.4 WHEN a CPU seat chooses a move on hard THE APP SHALL answer within 100 ms on the test box.
   - AC1.5 WHEN a move isn't legal THE APP SHALL refuse it, keep the state, and say why in one line.
+  - AC1.6 WHEN the turn passes to a person THE APP SHALL show a short banner over the board with
+    whose turn it is ("Your turn", "Sam's turn"); not when the pass screen already says it.
+  - AC1.7 WHEN a CPU seat is on its turn THE APP SHALL show three moving dots in its chip.
+  - AC1.8 WHEN a match ends THE APP SHALL show the result in a banner over the board first, with a
+    short burst of confetti for a win on this device or any win among friends (not for a draw),
+    then the Result screen.
 - **US2 (P1): Pass-and-play on one device**. As a family at one table, I want to take turns on one
   phone or tablet, so that we play together with no network.
   - AC2.1 WHEN a match has 2 or more human seats THE APP SHALL show whose turn it is, by name, and
@@ -48,8 +54,8 @@ the rules), counting solo play on the server.
   and play with no signal, so that a trip or a flight is no problem.
   - AC3.1 WHEN the hub was opened once online and the network is off THE APP SHALL open the hub and
     every game opened before, and play them.
-  - AC3.2 WHEN I tap "Download all for offline" THE APP SHALL cache every game and say "All games
-    ready offline" only after each one is cached.
+  - AC3.2 WHEN I tap "Download all for offline" (in Settings) THE APP SHALL cache every game and
+    say "All games ready offline" only after each one is cached.
   - AC3.3 WHEN a new version is deployed and I open the app online THE APP SHALL show "Update
     ready", and one tap reloads it with the new files, never a mix of old and new.
   - AC3.4 WHEN the browser offers an install (`beforeinstallprompt`) THE APP SHALL show an Install
@@ -64,11 +70,16 @@ the rules), counting solo play on the server.
   - AC4.2 WHEN a match ends THE APP SHALL add it to that browser's scores (played, won, per game and
     level, and the last 20 results) and show them on the hub, with no network request.
   - AC4.4 WHEN the app starts THE APP SHALL ask for persistent storage (`navigator.storage.persist`).
+  - AC4.5 WHEN I open Setup for a game THE APP SHALL show a **How to play** card of 2 to 4 short
+    steps, open until this device has finished a match of that game, and closed (but there) after.
+  - AC4.6 WHEN I type a name for "You" on Setup and start THE APP SHALL keep it as this device's
+    name; the hub asks no name first.
 - **US5 (P1): Start an online room (members)**. As a member, I want to start a room and share it,
   so that people on other devices play with me.
-  - AC5.1 WHEN I am not signed in THE APP SHALL lead the hub's online panel with **Join a room**
-    and show **Members: sign in**; WHEN I sign in at `/member` (Access) THE APP SHALL bring me back
-    to the hub with **Play online** on each game that is on. A guest never sees a login.
+  - AC5.1 WHEN I open the hub THE APP SHALL show a **Play with friends** panel with a room-code
+    field and **Join** for anyone, and, when I am not signed in, a **Sign in to invite friends**
+    link; WHEN I sign in at `/member` (Access) THE APP SHALL bring me back to the hub with
+    **Invite friends** on each game that is on. A guest never has to sign in.
   - AC5.2 WHEN I start a room (2–8 seats in the game's range, CPU seats and level) THE APP SHALL
     give a 6-letter code (31 letters, no look-alikes), the link `/r/<code>`, its QR code, and
     **Copy link** (or **Share**).
@@ -83,6 +94,9 @@ the rules), counting solo play on the server.
     that gets their seat, not the role.
   - AC5.6 WHEN any player taps **Leave the room** THE APP SHALL open the seat for someone else and
     forget that tab's seat token.
+  - AC5.7 WHEN Cloudflare Access sends a member back (`/cdn-cgi/access/authorized`) THE APP SHALL
+    leave that request to the network (never its service worker's cache), so the sign-in
+    completes.
 - **US6 (P1): Join and play as a guest**. As anyone with a link or code, I want to join with only
   a nickname, so that I play online without an account.
   - AC6.1 WHEN I open `/r/<code>`, scan its QR code or type the code THE APP SHALL show the game
@@ -140,14 +154,21 @@ Design brief (`DESIGN.md`), in short:
   and blue `#2457a6` for suits and pieces (Ludo adds yellow `#e0a800` and green `#2e8b57`). Dark
   mode follows the device; a high-contrast theme. Text at least 4.5:1.
 - **Type:** the system UI font; large numbers and card ranks in its bold weight.
-- **The one memorable element:** big, crisp cards and pieces that move with a short slide.
-- **Screens (one primary action each):** Hub (the game list; **Play**), Setup (seats, CPU level,
-  kid mode; **Start**), Match (the board; play a move), Result (places; **Play again**), Settings
-  (nickname, kid mode, theme, sound, Install).
-- **Online screens** (`site/lib/online.js`): the hub's online panel (felt: **Join a room**,
-  **Online scores**, **Members: sign in** or **Play online** on each game for a member, **Admin**
-  for the owner), Start a room (seats, CPU seats, level; **Start the room**), Join (code or
-  nickname, each label above its field; **Join as Table** in its own panel), Lobby (`/r/<code>`:
+- **The one memorable element:** big, crisp cards and pieces that move with a short slide: the
+  deal, a card into your hand, a token to its square (a captured one back to base), a die roll, a
+  Memory pair leaving, a winning line shining (change 0005). Short Web Audio tones per game (a die
+  rattle, a capture, a token home, a card, a disc), from each view's optional `sound(move, note)`.
+- **Brand:** the logo is a card and a red die on felt (`site/icons/icon.svg`, no text), in the top
+  bar beside "Games" and as the app's icons.
+- **Screens (one primary action each):** Hub ("Pick a game", no question first; **Play**), Setup
+  (How to play, seats, CPU level, kid mode; **Start**), Match (the board, a turn banner, a CPU's
+  thinking dots; play a move; a result banner at the end), Result (places; **Play again**),
+  Settings (name, kid mode, theme, sound, Download all for offline, Install).
+- **Online screens** (`site/lib/online.js`): the hub's **Play with friends** panel (felt: a
+  room-code field and **Join**, **Sign in to invite friends** or **Invite friends** on each game
+  for a member, **Admin** for the owner), Invite friends (your name, seats, CPU seats, level;
+  **Start the room**), Join (a room's link: nickname, each label above its field; **Join as Table**
+  in its own panel), Lobby (`/r/<code>`:
   an **Invite** panel with the code, QR code, link, **Share** or **Copy link**, and a **Seats**
   panel with a row per seat and the tags owner, host, you; the owner sees Invite first and has
   **Start**, **Lock**, **Make it a CPU**, **Kick**, **Add a seat**, **Close the room**; everyone
@@ -160,7 +181,8 @@ Design brief (`DESIGN.md`), in short:
   Featured, ↑ ↓, **Save**, **Add a game**), **Rooms** (players, **Close**), **Scores** (opens on
   the most played game; **Export**, **Restore…**, **Undo the restore**). Tables scroll on a phone
   and sort by column (`site/admin/sort.js`).
-- **States:** first visit (nickname, optional; "Player" by default), loading a game ("Getting
+- **States:** first visit (no question: the name is "Player" until one is typed on Setup or
+  Invite friends), loading a game ("Getting
   Ludo…"), offline (a small "Offline" mark; games not yet cached say "Needs signal once"; the online
   row hides), "Update ready", an old browser ("Please update your browser to play"). Online: "This
   room has ended", "This room uses a newer version of the game. Reload", "Reconnecting…", "The
@@ -217,7 +239,9 @@ Each game's screen is `site/games/<id>/view.js`: `render(box, ctx)` draws the vi
 (HTML buttons with SVG inside, each with `data-x`, `data-y` and `data-key` for the keyboard),
 `status(view, seat)` gives each player's chip text, and `hintText(move, view, names)` words a hint.
 `ctx` has the view, the legal moves, the seat shown, the names, kid mode, the hint, the layout,
-`play(move)` and `say(text)`.
+`first` (true on a match's first draw, so a view forgets what it kept from the last match),
+`play(move)` and `say(text)`. A view keeps only what it needs to animate a change since its last
+draw; the motion is CSS keyframes, and `prefers-reduced-motion` turns it all off.
 
 **Engine messages** (each with `v: 1`). To the engine: `{t: "move", seat, seq, move}`,
 `{t: "undo", seat}`, `{t: "hint", seat}`. From it: `{t: "view", seat, seq, turn, view, legal, note,
@@ -269,7 +293,8 @@ mixes versions and an opened app makes no requests. `sw.js` itself is `no-cache`
 The first release takes over at once; a later one waits until the player taps **Reload with the
 update**. **Download all for offline** asks the service worker to save every game's two files, then
 checks each one in the cache before it says "All games ready offline" (AC3.2). The service worker
-leaves `/api/*`, `/member` and `/admin` to the network, except `/api/catalog`: network first, the
+leaves `/api/*`, `/member`, `/admin` and `/cdn-cgi/*` (Access's return, AC5.7) to the network,
+except `/api/catalog`: network first, the
 last one kept for offline, and a game the catalogue turns off loses its saved files (AC8.2).
 
 ### Online play (changes 0002, 0003, 0004)
@@ -349,7 +374,7 @@ back as it was at any time in the last 30 days (Cloudflare keeps that history). 
 only add; Cloudflare refuses a rollback across them, so a bad release is fixed forward.
 
 `site/games/index.json` lists each game: `id, name, type, players, cpu, ages, teaching, version,
-kb, about`. A unit test checks that every folder has an entry, holds only `rules.js` and
+kb, about, how` (`how`: the 2 to 4 steps of its How to play card). A unit test checks that every folder has an entry, holds only `rules.js` and
 `view.js`, and that `kb` matches the folder's size (rounded up).
 
 **The CPU levels.** Four in a Row searches 1, 3 or 6 moves ahead (easy, normal, hard). Memory's CPU

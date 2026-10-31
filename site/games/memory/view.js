@@ -7,12 +7,15 @@ let shown = [];
 export default {
   status: (view, seat) => ({ text: `${view.pairs[seat]} ${view.pairs[seat] === 1 ? "pair" : "pairs"}` }),
   hintText: () => "Try the card that glows.",
+  sound: (_move, note) => (note.includes("found a pair") ? "home" : "card"),
   render(box, ctx) {
     const { cols, faces } = ctx.view;
     const legal = new Set(ctx.legal.map((m) => m.i));
     const tiles = faces.map((face, i) => {
       const at = { x: i % cols, y: Math.floor(i / cols), key: `t${i}` };
-      if (face === -1) return el("span", { class: "tile gone", "aria-hidden": "true" });
+      // A pair just found glows as it leaves the table.
+      if (face === -1)
+        return el("span", { class: `tile gone${!ctx.first && shown[i] !== -1 ? " taken" : ""}`, "aria-hidden": "true" });
       const classes = ["tile"];
       if (face !== null && shown[i] === null) classes.push("flip");
       if (ctx.kid && legal.has(i)) classes.push("legal");

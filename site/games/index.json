@@ -8,8 +8,13 @@
     "ages": "6+",
     "teaching": true,
     "version": 1,
-    "kb": 9,
-    "about": "Match the suit or the rank. An 8 changes the suit. Be first out of cards."
+    "kb": 10,
+    "about": "Match the suit or the rank. An 8 changes the suit. Be first out of cards.",
+    "how": [
+      "Play a card of the same suit or rank as the top card of the pile.",
+      "An 8 goes on any card. Then you pick the next suit.",
+      "No card to play? Draw one. The first player with no cards wins."
+    ]
   },
   {
     "id": "go-fish",
@@ -21,7 +26,12 @@
     "teaching": true,
     "version": 1,
     "kb": 9,
-    "about": "Ask for a rank you hold. Collect books of four. Most books wins."
+    "about": "Ask for a rank you hold. Collect books of four. Most books wins.",
+    "how": [
+      "Tap a card in your hand, then the player to ask for that rank.",
+      "They give you all of that rank, and you ask again. None? Go fishing: take a card from the pond.",
+      "Four of a rank make a book. The most books wins."
+    ]
   },
   {
     "id": "memory",
@@ -33,7 +43,12 @@
     "teaching": true,
     "version": 1,
     "kb": 5,
-    "about": "Turn two cards. Find a pair and play again. Most pairs wins."
+    "about": "Turn two cards. Find a pair and play again. Most pairs wins.",
+    "how": [
+      "Turn two cards.",
+      "A pair? You keep it and play again. No pair? Remember where they are.",
+      "When the table is empty, the most pairs wins."
+    ]
   },
   {
     "id": "ludo",
@@ -44,8 +59,13 @@
     "ages": "5+",
     "teaching": true,
     "version": 1,
-    "kb": 11,
-    "about": "Roll a 6 to come out. Race your four tokens home and send others back."
+    "kb": 12,
+    "about": "Roll a 6 to come out. Race your four tokens home and send others back.",
+    "how": [
+      "Roll the die. A 6 brings a token out and gives you another roll.",
+      "Tap a token to move it. Land on another player's token to send it back to base. Stars are safe.",
+      "Bring all four tokens to the middle, with an exact roll, to win."
+    ]
   },
   {
     "id": "four-in-a-row",
@@ -57,7 +77,12 @@
     "teaching": true,
     "version": 1,
     "kb": 7,
-    "about": "Drop discs in turn. Make a line of four across, up or on a slant."
+    "about": "Drop discs in turn. Make a line of four across, up or on a slant.",
+    "how": [
+      "Tap a column to drop your disc into it.",
+      "Take turns with the other player.",
+      "Make a line of four, across, up or on a slant, to win."
+    ]
   },
   {
     "id": "quiz-race",
@@ -69,6 +94,11 @@
     "teaching": true,
     "version": 1,
     "kb": 7,
-    "about": "Answer sums and kids' facts. Each right answer is a step. First home wins."
+    "about": "Answer sums and kids' facts. Each right answer is a step. First home wins.",
+    "how": [
+      "Read the question and tap the answer.",
+      "A right answer moves you one step along the track.",
+      "The first player to reach step 10 wins."
+    ]
   }
 ]
