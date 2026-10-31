@@ -6,7 +6,7 @@
 ## Goal
 
 A game room for family, kids and friends at `games.app.a69x.in`. Anyone opens it in a browser on a
-phone, tablet, laptop or TV, or installs it as an app, and plays six classic games solo against the
+phone, tablet, laptop or TV, or installs it as an app, and plays seven classic games solo against the
 CPU or pass-and-play on one device, offline, and two puzzles (Sudoku, Crossword). Kid mode teaches. Scores stay in that browser. Members
 (signed in with Cloudflare Access) start online rooms; anyone joins one by link, code or QR code
 with a nickname, from any device, and the online scores are shared. The owner runs it from
@@ -26,8 +26,8 @@ the rules), counting solo play on the server.
 
 - **US1 (P1): Play a game against the CPU**. As anyone, I want to pick a game and play it against
   CPU players, so that I can play alone on any device.
-  - AC1.1 WHEN I open `/` THE APP SHALL list the eight games (Crazy Eights, Go Fish, Memory, Ludo,
-    Four in a Row, Quiz Race, Sudoku, Crossword) from `site/games/index.json`, each with its type,
+  - AC1.1 WHEN I open `/` THE APP SHALL list the nine games (Crazy Eights, Go Fish, Memory, Ludo,
+    Four in a Row, Card Lines, Quiz Race, Sudoku, Crossword) from `site/games/index.json`, each with its type,
     players and ages.
   - AC1.2 WHEN I start a game with 1 human and 1–5 CPU seats (within the game's player range) and a
     level (easy, normal, hard) THE APP SHALL play the match to the end, with CPU moves after a short
@@ -170,6 +170,20 @@ the rules), counting solo play on the server.
     books, Words, or A mix) it SHALL build a new grid from that topic's words and clues.
   - AC11.3 WHEN I play a puzzle THE APP SHALL show **Hint** (one right step) and **Undo**, keep the
     score under its pick (a level or a topic), and say "Solved!" at the end.
+- **US12 (P2): Card Lines, a card-and-board game for more players** (change 0007). As a family or
+  friends, I want a Sequence-style game for 2 to 4, so that more of us play one match together.
+  - AC12.1 WHEN I tap a card in my hand THE APP SHALL make its open squares glow, and a tap on one
+    puts my chip there and draws me a new card; a tap on a square that shows a card I hold plays it.
+  - AC12.2 WHEN five chips of one colour are in a row (across, down or on a slant; a corner counts
+    for every colour) THE APP SHALL make them a line that no jack takes off; two colours need two
+    lines (sharing at most one square), three colours need one.
+  - AC12.3 WHEN four play THE APP SHALL seat them in two pairs (seats 1 and 3 against 2 and 4), a
+    colour for each pair, and a pair's win is a win for both partners.
+  - AC12.4 WHEN I play a two-eyed jack (♦ ♣) THE APP SHALL let me put a chip on any open square;
+    a one-eyed jack (♠ ♥) takes another colour's chip off, unless it is in a line; a card whose two
+    squares are taken is dead, and a tap trades it in, once a turn, and the turn goes on.
+  - AC12.5 WHEN the board is full THE APP SHALL end the match: the most lines first, then the
+    longest row of chips.
 
 ## UI
 
@@ -251,7 +265,7 @@ Every path but `/health`, `/.well-known/shipify.json` and `/api/*` is a file fro
 
 **The game interface** (every `site/games/<id>/rules.js`), pure and deterministic, with no DOM or
 network: metadata `{id, name, version, players: {min, max}, hidden, realtime: false}` (a puzzle
-adds `puzzle: true`), and:
+adds `puzzle: true`; a game of pairs adds `teams: true`, so a shared first place is a win), and:
 
 - `init(seats, seed, pick)`: the state for a number of seats. `pick` is a puzzle's choice from its
   `index.json` `pick` (a difficulty, a topic); other games ignore it. States are plain JSON. Each has `turn` (the
@@ -264,7 +278,7 @@ adds `puzzle: true`), and:
 - `apply(state, seat, move)`: the next state; the given state is never changed. It throws an
   `Error` whose message is the one-line reason (AC1.5).
 - `winner(state)`: `null`, or `{places}`: groups of seats, best first; tied seats share a group
-  (`[[1], [0, 2]]`). A draw is one group of every seat. Every game also ends after a fixed number
+  (`[[1], [0, 2]]`). A draw is one group of every seat. Partners in a game of pairs share their group. Every game also ends after a fixed number
   of moves, so no match runs for ever.
 - `ai(state, seat, level)`: the CPU's move for `easy`, `normal`, `hard`, and `best` (the hint). It
   sees only what that seat may see, and gives the same move for the same position.
@@ -308,7 +322,7 @@ move or the room says it's back (AC6.6).
 The import rule, checked by a unit test: `rules.js` imports only `site/lib/{rng,deck,board}.js`;
 only `store.js` touches `localStorage`.
 
-**The eight games** (all `realtime: false`):
+**The nine games** (all `realtime: false`):
 
 | Game | Type | Players | Notes |
 |---|---|---|---|
@@ -317,6 +331,7 @@ only `store.js` touches `localStorage`.
 | Memory | kids | 1–4 | Pairs face down; a match scores and plays again. CPU recall by level |
 | Ludo | board | 2–4 | A 6 leaves base, captures, safe squares, a 6 plays again (a third 6 ends the turn), an exact roll to finish; the first with four tokens home wins |
 | Four in a Row | board | 2 | 7×6 grid. The owner's "Connect 4", named generically (no trade names) |
+| Card Lines | board | 2–4 | The owner's "Sequence", named generically. Two decks; a 10×10 board of every card but the jacks twice (square i and 99 − i) and four free corners; hands of 7 (2 players) or 6. Lines of five; four play in pairs. Jacks wild (two eyes) or take a chip (one eye); dead cards trade in. A full board ends it |
 | Quiz Race | kids | 1–4 | Answer a question (maths made from the seed, or a short JSON pack of kids' facts); right moves you a step on a 10-step track; first home wins. CPU right by level (60, 80, 95 %) |
 | Sudoku | puzzles | 1 | A grid made from the seed with one solution, graded Easy (naked singles), Medium (hidden singles), Hard and Expert (more, fewer givens); notes, repeats in red, a mistakes count. Hint: the next cell a person would find |
 | Crossword | puzzles | 1 | A grid of about 9–12 words built from the seed out of a built-in word bank (Animals, Food, World, Science, Sports, Music, films and books, Words; A mix; Today's: all topics, seeded by the date). Hint: one right letter |
@@ -404,7 +419,7 @@ theme, sound}, scores: {<game>: {<level>: {played, won}}}, recent: [last 20 {gam
 place, at}]}`, about 5 KB. `named` is false until the first-visit name is saved or skipped. The
 level is `easy`, `normal`, `hard`, `friends` for a match with no CPU, or a puzzle's pick
 (`expert`, `today`, `animals`…): any id of `[a-z-]`, up to 16 characters. Scores are seat 1's (the
-device's player); a win is first place alone. What is read back is checked: data of another
+device's player); a win is first place alone, or shared with a partner in a game of pairs. What is read back is checked: data of another
 shape starts blank, and only the known fields are kept. A local match in progress isn't
 kept: closing the tab ends it. Online matches aren't in these scores: the Hub keeps them.
 
@@ -420,7 +435,9 @@ kb, about, how` (`how`: the 2 to 4 steps of its How to play card), and for a puz
 every device gets the same puzzle that day). A unit test checks that every folder has an entry, holds only `rules.js` and
 `view.js`, and that `kb` matches the folder's size (rounded up).
 
-**The CPU levels.** Four in a Row searches 1, 3 or 6 moves ahead (easy, normal, hard). Memory's CPU
+**The CPU levels.** Card Lines' CPU scores each square by the stretches of five it builds and
+blocks: easy takes a winning square, else any move; normal blocks every stretch; hard blocks only
+a stretch where another colour has three, and keeps its jacks longer. Four in a Row searches 1, 3 or 6 moves ahead (easy, normal, hard). Memory's CPU
 remembers each card it saw with a 35, 70 or 95 % chance. Quiz Race's CPU is right 60, 80 or 95
 times in 100. The card games and Ludo use simple rules that get smarter by level.
 

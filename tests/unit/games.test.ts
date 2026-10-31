@@ -3,6 +3,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import cardLines from "../../site/games/card-lines/rules.js";
 import crazyEights from "../../site/games/crazy-eights/rules.js";
 import crossword from "../../site/games/crossword/rules.js";
 import fourInARow from "../../site/games/four-in-a-row/rules.js";
@@ -35,6 +36,7 @@ const GAMES = [
   memory,
   ludo,
   fourInARow,
+  cardLines,
   quizRace,
   sudoku,
   crossword,
@@ -177,13 +179,14 @@ describe("the game list (AC1.1)", () => {
   }[];
   const folders = readdirSync(DIR).filter((f) => statSync(join(DIR, f)).isDirectory());
 
-  it("lists the eight games in order, one entry per folder", () => {
+  it("lists the nine games in order, one entry per folder", () => {
     expect(list.map((g) => g.name)).toEqual([
       "Crazy Eights",
       "Go Fish",
       "Memory",
       "Ludo",
       "Four in a Row",
+      "Card Lines",
       "Quiz Race",
       "Sudoku",
       "Crossword",
