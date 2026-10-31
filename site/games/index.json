@@ -1,5 +1,83 @@
 [
   {
+    "id": "four-in-a-row",
+    "name": "Four in a Row",
+    "type": "board",
+    "players": [2, 2],
+    "cpu": true,
+    "ages": "5+",
+    "teaching": true,
+    "version": 1,
+    "kb": 7,
+    "about": "Drop discs in turn. Make a line of four across, up or on a slant.",
+    "how": [
+      "Tap a column to drop your disc into it.",
+      "Take turns with the other player.",
+      "Make a line of four, across, up or on a slant, to win."
+    ]
+  },
+  {
+    "id": "card-lines",
+    "name": "Wild Jacks",
+    "type": "board",
+    "players": [2, 4],
+    "cpu": true,
+    "ages": "7+",
+    "teaching": true,
+    "version": 1,
+    "kb": 19,
+    "about": "Play a card, put a chip on its square, make lines of five. Jacks are wild. Four play in pairs.",
+    "how": [
+      "Tap a card in your hand. Its squares glow: tap one to put your chip there.",
+      "Five chips in a row make a line; corners count for all. Two players need two lines, three need one.",
+      "Four play in pairs (1 and 3 against 2 and 4), with a colour a pair, and need two lines.",
+      "Two-eyed jacks (♦ ♣) go anywhere; one-eyed jacks (♠ ♥) take a chip off. Dead card? Tap to trade it."
+    ]
+  },
+  {
+    "id": "sudoku",
+    "name": "Sudoku",
+    "type": "puzzles",
+    "players": [1, 1],
+    "cpu": false,
+    "ages": "8+",
+    "teaching": true,
+    "version": 1,
+    "kb": 18,
+    "about": "Fill the grid so each row, column and box has 1 to 9 once. Four levels.",
+    "how": [
+      "Tap a square, then a number. Each row, column and 3×3 box holds 1 to 9 once.",
+      "Notes puts small pencil marks. A placed number clears it from the notes around it.",
+      "Red means a repeat. Stuck? Hint shows one right step, and Undo takes a move back."
+    ],
+    "pick": {
+      "label": "Difficulty",
+      "options": [
+        ["easy", "Easy"],
+        ["normal", "Medium"],
+        ["hard", "Hard"],
+        ["expert", "Expert"]
+      ]
+    }
+  },
+  {
+    "id": "ludo",
+    "name": "Ludo",
+    "type": "board",
+    "players": [2, 4],
+    "cpu": true,
+    "ages": "5+",
+    "teaching": true,
+    "version": 1,
+    "kb": 12,
+    "about": "Roll a 6 to come out. Race your four tokens home and send others back.",
+    "how": [
+      "Roll the die. A 6 brings a token out and gives you another roll.",
+      "Tap a token to move it. Land on another player's token to send it back to base. Stars are safe.",
+      "Bring all four tokens to the middle, with an exact roll, to win."
+    ]
+  },
+  {
     "id": "crazy-eights",
     "name": "Crazy Eights",
     "type": "cards",
@@ -51,58 +129,6 @@
     ]
   },
   {
-    "id": "ludo",
-    "name": "Ludo",
-    "type": "board",
-    "players": [2, 4],
-    "cpu": true,
-    "ages": "5+",
-    "teaching": true,
-    "version": 1,
-    "kb": 12,
-    "about": "Roll a 6 to come out. Race your four tokens home and send others back.",
-    "how": [
-      "Roll the die. A 6 brings a token out and gives you another roll.",
-      "Tap a token to move it. Land on another player's token to send it back to base. Stars are safe.",
-      "Bring all four tokens to the middle, with an exact roll, to win."
-    ]
-  },
-  {
-    "id": "four-in-a-row",
-    "name": "Four in a Row",
-    "type": "board",
-    "players": [2, 2],
-    "cpu": true,
-    "ages": "5+",
-    "teaching": true,
-    "version": 1,
-    "kb": 7,
-    "about": "Drop discs in turn. Make a line of four across, up or on a slant.",
-    "how": [
-      "Tap a column to drop your disc into it.",
-      "Take turns with the other player.",
-      "Make a line of four, across, up or on a slant, to win."
-    ]
-  },
-  {
-    "id": "card-lines",
-    "name": "Card Lines",
-    "type": "board",
-    "players": [2, 4],
-    "cpu": true,
-    "ages": "7+",
-    "teaching": true,
-    "version": 1,
-    "kb": 19,
-    "about": "Play a card, put a chip on its square, make lines of five. Jacks are wild. Four play in pairs.",
-    "how": [
-      "Tap a card in your hand. Its squares glow: tap one to put your chip there.",
-      "Five chips in a row make a line; corners count for all. Two players need two lines, three need one.",
-      "Four play in pairs (1 and 3 against 2 and 4), with a colour a pair, and need two lines.",
-      "Two-eyed jacks (♦ ♣) go anywhere; one-eyed jacks (♠ ♥) take a chip off. Dead card? Tap to trade it."
-    ]
-  },
-  {
     "id": "quiz-race",
     "name": "Quiz Race",
     "type": "kids",
@@ -118,32 +144,6 @@
       "A right answer moves you one step along the track.",
       "The first player to reach step 10 wins."
     ]
-  },
-  {
-    "id": "sudoku",
-    "name": "Sudoku",
-    "type": "puzzles",
-    "players": [1, 1],
-    "cpu": false,
-    "ages": "8+",
-    "teaching": true,
-    "version": 1,
-    "kb": 18,
-    "about": "Fill the grid so each row, column and box has 1 to 9 once. Four levels.",
-    "how": [
-      "Tap a square, then a number. Each row, column and 3×3 box holds 1 to 9 once.",
-      "Notes puts small pencil marks. A placed number clears it from the notes around it.",
-      "Red means a repeat. Stuck? Hint shows one right step, and Undo takes a move back."
-    ],
-    "pick": {
-      "label": "Difficulty",
-      "options": [
-        ["easy", "Easy"],
-        ["normal", "Medium"],
-        ["hard", "Hard"],
-        ["expert", "Expert"]
-      ]
-    }
   },
   {
     "id": "crossword",

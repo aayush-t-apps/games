@@ -1,4 +1,4 @@
-// Card Lines: play a card from your hand and put a chip on a square of the board that shows it.
+// Wild Jacks (id `card-lines`): play a card from your hand and put a chip on a square of the board that shows it.
 // Five chips in a line (across, down or on a slant) make a line; the four corners count for
 // everyone. Each player has a colour; four players play in two pairs (seats 0 and 2 against 1 and
 // 3), a colour for each pair. Two colours need two lines, three need one. A two-eyed jack (♦ ♣)
@@ -261,7 +261,7 @@ function ai(s, seat, level) {
 
 export default {
   id: "card-lines",
-  name: "Card Lines",
+  name: "Wild Jacks",
   version: 1,
   players: { min: 2, max: 4 },
   hidden: true,

@@ -49,7 +49,7 @@ The tokens are the CSS variables at the top of `site/lib/app.css`.
 | Paper | `#f7f4ec` | the page; text on felt and wood |
 | Ink | `#1b1b1b` | text; black suits |
 | Red | `#c0392b` | hearts and diamonds; primary buttons; seat 1 |
-| Blue | `#2457a6` | the Four in a Row frame; focus ring; a Ludo colour; Card Lines chips (with red and green, each with its own white mark) |
+| Blue | `#2457a6` | the Four in a Row frame; focus ring; a Ludo colour; Wild Jacks chips (with red and green, each with its own white mark) |
 | Yellow `#e0a800`, green `#2e8b57` | | Ludo colours; yellow is also the kid-mode glow |
 
 Dark mode follows the device (deep felt `#0f231a` page, paper text, yellow focus ring). High
@@ -80,7 +80,7 @@ Big, crisp cards and pieces, drawn by code in SVG, that move with a short slide:
 cards, tiles or answers are dealt in one after another, a played card slides onto the pile, a card
 you draw or get slides into your hand, a disc drops down its column, a Memory tile flips and a
 found pair glows as it leaves, a Ludo token slides to its square and a captured one flies back to
-its base, the die rolls, a winning Four in a Row line shines, a Card Lines chip drops onto its
+its base, the die rolls, a winning Four in a Row line shines, a Wild Jacks chip drops onto its
 square and a new line of five shines. Everything else stays quiet: flat
 colour, no shadows, no gradients.
 

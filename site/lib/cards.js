@@ -188,6 +188,9 @@ export function emblem(id) {
           .join(""),
       )
       .join("")}`,
+    "card-lines": `<g transform="rotate(-10 24 26)"><rect x="12" y="4" width="28" height="40" rx="4" fill="#fffdf7" stroke="${c.ink}" stroke-width="1.5"/><text x="16" y="20" font-size="14" font-weight="800" fill="${c.ink}">J</text>${suitShape("D", 25, 26, 11)}</g><circle cx="50" cy="22" r="6" fill="${c.red}" stroke="${c.paper}" stroke-width="1.5"/>${[0, 1, 2, 3, 4]
+      .map((i) => `<circle cx="${8 + i * 12}" cy="55" r="5" fill="${c.blue}" stroke="${c.paper}" stroke-width="1.5"/>`)
+      .join("")}`,
     "quiz-race": `<path d="M6 50h52" stroke="${c.paper}" stroke-width="3" stroke-dasharray="6 4"/><circle cx="18" cy="44" r="6" fill="${c.red}"/><circle cx="32" cy="44" r="6" fill="${c.blue}"/><path d="M52 18v32" stroke="${c.paper}" stroke-width="3"/><path d="M52 18h-14l4 6-4 6h14Z" fill="${c.yellow}"/><text x="14" y="30" font-size="22" font-weight="800" fill="${c.paper}">?</text>`,
     sudoku: `<rect x="6" y="6" width="52" height="52" rx="4" fill="#fffdf7"/><path d="M23.3 6v52M40.6 6v52M6 23.3h52M6 40.6h52" stroke="${c.ink}" stroke-width="2"/><text x="10" y="20" font-size="12" font-weight="800" fill="${c.ink}">5</text><text x="28" y="37" font-size="12" font-weight="800" fill="${c.blue}">3</text><text x="45" y="54" font-size="12" font-weight="800" fill="${c.red}">9</text>`,
     crossword: `${[0, 1, 2, 3]
