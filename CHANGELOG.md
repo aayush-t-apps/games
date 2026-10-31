@@ -25,6 +25,12 @@ Versions: [Semantic Versioning](https://semver.org/). Change docs: `docs/changes
   note) is at the bottom. The hub keeps only **Join friends** with a code; sign-in and sign-out are
   in Settings. The room's seats say **Joined**, **Away**, **CPU** or **Waiting for a player**, with
   a chime when someone sits down. Game boxes tilt a little under a tap.
+- A room has one role, the **Host**, instead of an owner and a host: the member who starts it.
+  Their device runs the match and has the controls. **Leave the room** passes the role at once;
+  when the host's device drops, the game shows "Waiting for the host…" and the role passes after
+  30 seconds. **Make me host** shows only while the host is away. The owner tag, **Make me the
+  owner** and the 2-minute owner wait are gone. The room's messages are version 2, so a tab open
+  on an older release asks to reload once; a live room keeps its current host.
 
 ## [0.4.0] - 2026-10-30
 

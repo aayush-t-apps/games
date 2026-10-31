@@ -16,7 +16,7 @@ a laptop, or a TV browser. The one job: pick a game and be playing in two taps, 
 | Settings (a bottom sheet on phones): name, kid mode, theme, sound, Download all for offline, Install | **Done** |
 | Invite friends (members): your name, seats, CPU seats, level | **Start the room** |
 | Join (a room's link): a nickname | **Join** (or **Join as Table**) |
-| Lobby (`/r/<code>`): an Invite panel (the code large, its QR code, the link) and a Seats panel (a row per seat, with owner, host and you tags) | **Start** (the owner), **Share** (everyone) |
+| Lobby (`/r/<code>`): an Invite panel (the code large, its QR code, the link) and a Seats panel (a row per seat, with host and you tags; the host tag is yellow) | **Start** (the host), **Share** (everyone), **Make me host** (only while the host is away) |
 | Online scores (after an online match): per game, top players and the last matches | pick a game |
 | Admin (`/admin`): Overview (fact cards), Games (a list), Rooms, Scores (Export, Restore) | **Refresh**, **Save**, **Close**, **Export** |
 

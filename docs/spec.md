@@ -84,15 +84,13 @@ the rules), counting solo play on the server.
   - AC5.2 WHEN I start a room (2–8 seats in the game's range, CPU seats and level) THE APP SHALL
     give a 6-letter code (31 letters, no look-alikes), the link `/r/<code>`, its QR code, and
     **Copy link** (or **Share**).
-  - AC5.3 WHEN my seat holds the owner role (seat 0 at first) THE APP SHALL let me start, kick,
-    lock, unlock, set CPU seats, rematch and close, and refuse these controls from any other seat.
+  - AC5.3 WHEN my seat is the room's **host** (seat 0, the member who started it, at first; one
+    role: its device runs the rules and has the controls) THE APP SHALL let me start, kick, lock,
+    unlock, set CPU seats, rematch and close, and refuse these controls from any other seat.
   - AC5.4 WHEN a `/api/member/*` call has no valid Access token (signature, audience, issuer or
     expiry) THE APP SHALL refuse it with 401 and change nothing.
-  - AC5.5 WHEN the owner taps **Leave the room** THE APP SHALL open their seat and give the owner's
-    controls to the next online player; WHEN the owner's device only drops, THE APP SHALL keep the
-    role for 2 minutes, then pass it to the next online player, unless the device comes back first;
-    meanwhile any player MAY tap **Make me the owner**. A member who comes back to their room after
-    that gets their seat, not the role.
+  - AC5.5 WHEN the host taps **Leave the room** THE APP SHALL open their seat and make the next
+    online player the host at once, going on from the room's last snapshot.
   - AC5.6 WHEN any player taps **Leave the room** THE APP SHALL open the seat for someone else and
     forget that tab's seat token.
   - AC5.7 WHEN Cloudflare Access sends a member back (`/cdn-cgi/access/authorized`) THE APP SHALL
@@ -103,14 +101,17 @@ the rules), counting solo play on the server.
   - AC6.1 WHEN I open `/r/<code>`, scan its QR code or type the code THE APP SHALL show the game
     and seats, ask once for a nickname (1–16 characters), load the game if needed, and give me
     the next free seat, or a spectator place when the room is full, locked or started.
-  - AC6.2 WHEN the owner starts THE APP SHALL run the match on the host device (the owner's by
-    default) and send each device only its own seat's view; spectators get the public view.
+  - AC6.2 WHEN the host starts THE APP SHALL run the match on the host's device and send each
+    device only its own seat's view; spectators get the public view.
   - AC6.3 WHEN I move out of turn, with an old `seq` or for another seat THE APP SHALL refuse it
     and say why (as AC1.5).
   - AC6.4 WHEN my device drops (network, sleep, a deploy) THE APP SHALL reconnect by itself (1, 2,
     4 … 15 s) and give back my seat and the latest view.
-  - AC6.5 WHEN the host drops, or a player taps **Make me host**, THE APP SHALL make that next
-    device the host, going on from the room's last snapshot.
+  - AC6.5 WHEN the host's device only drops (a closed tab, a sleeping phone) while another player
+    is here THE APP SHALL show "Waiting for the host…" and hold the moves; WHEN it is back within
+    30 s nothing changes; else THE APP SHALL make the next online player the host, going on from
+    the room's last snapshot. Only while the host is away MAY a player tap **Make me host** to take
+    the role at once. A host who comes back after that is a player.
   - AC6.6 WHEN a player is offline for 60 s on their turn THE APP SHALL let the host's CPU play
     for them until they are back.
   - AC6.7 WHEN the code is unknown or the room has ended THE APP SHALL say "This room has ended"
@@ -200,11 +201,12 @@ Design brief (`DESIGN.md`), in short:
   in its own panel), Lobby (`/r/<code>`:
   an **Invite** panel with the code, QR code, link, **Share** or **Copy link**, and a **Seats**
   panel with a row per seat, its state in words (Joined, Away, CPU, Waiting for a player; a chime
-  when someone sits down) and the tags owner, host, you; the owner sees Invite first and has
+  when someone sits down) and the tags host, you; the host sees Invite first and has
   **Start**, **Lock**, **Make it a CPU**, **Kick**, **Add a seat**, **Close the room**; everyone
-  has **Leave the room**; an owner-away notice with **Make me the owner**), Match (as above, with
-  a bar: the room, its host, **Make me host**, "Reconnecting…"; no Hint or Undo online), Result
-  (places; **Rematch** for the owner, **Scores**, **Back to the room**), Online scores (per game,
+  has **Leave the room**; while the host is away, "Waiting for the host…" with **Make me host**),
+  Match (as above, with a bar: the room, its host, "Waiting for the host…" and **Make me host**
+  while the host is away, "Reconnecting…"; no Hint or Undo online), Result
+  (places; **Rematch** for the host, **Scores**, **Back to the room**), Online scores (per game,
   two panels: top players, last 20 matches).
 - **Admin** (`/admin`, `site/admin/`): a header with "Signed in as …" and **Members** (the Access
   policy); tabs on one line (arrow keys); **Overview** (fact cards, tables), **Games** (a list: On,
@@ -275,7 +277,7 @@ Each game's screen is `site/games/<id>/view.js`: `render(box, ctx)` draws the vi
 `play(move)` and `say(text)`. A view keeps only what it needs to animate a change since its last
 draw; the motion is CSS keyframes, and `prefers-reduced-motion` turns it all off.
 
-**Engine messages** (each with `v: 1`). To the engine: `{t: "move", seat, seq, move}`,
+**Engine messages** (each with `v: 2`, the `PROTOCOL` shared with the room). To the engine: `{t: "move", seat, seq, move}`,
 `{t: "undo", seat}`, `{t: "hint", seat}`. From it: `{t: "view", seat, seq, turn, view, legal, note,
 last, places}` for every seat after every change, then `{t: "public", …}` the same with the public
 view and no legal moves, `{t: "refused", seat, reason}`, `{t: "hinted", seat, move}`,
@@ -355,32 +357,36 @@ and whether online play is set up; 60 s at the edge), `GET /api/scores?game=`, `
 
 **Room DO** (`src/worker/objects/room.ts`, its rules in `room-logic.ts`), one per code:
 storage `meta` (game and version, the member, the owner token's hash, seats `{nick, cpu, token
-hash}`, host seat, `ownerSeat`, `ownerAway`, the people count last `reported`, locked, started,
-ended, match count, expiry) and `snap` (the host's last `state`: one write per move). Seat 0 is
-kept for the owner token until that device leaves or is kicked. Sockets hibernate; each keeps
+hash}`, the `host` seat, `hostAway` (when the host's device dropped), the people count last
+`reported`, locked, started, ended, match count, expiry) and `snap` (the host's last `state`: one
+write per move). Seat 0 is kept for the member's owner token (the seat key from **Start the
+room**) until that device leaves or is kicked. Sockets hibernate; each keeps
 `{seat, table}` (seat `null`: a spectator); `ping` gets `pong` without waking the room. It checks
-only the envelope: protocol `v: 1`, the type for the sender, 4 KB a message (32 KB for `state`),
+only the envelope: protocol `v: 2`, the type for the sender, 4 KB a message (32 KB for `state`),
 20 a second; and caps of 8 seats, 8 spectators, 24 sockets. One alarm ends the room 6 hours after
 it starts, or 10 minutes after its last device leaves: it says `closed`, unlists itself from the
-Hub and deletes its storage. The same alarm rings 2 minutes after the owner's device dropped while
-others stayed, and passes the owner role to the next online player (AC5.5). When the count of
-people seated changes, the room tells the Hub (`seated`).
+Hub and deletes its storage. The same alarm rings 30 s after the host's device dropped while
+others stayed, and makes the next online player the host (AC6.5). A room stored by an older
+release keeps its current host. When the count of people seated changes, the room tells the Hub
+(`seated`).
 
-**Messages** (JSON, `v: 1`). Device → room: `hello {nick, seatToken?, ownerToken?, table?}`,
-`move {seq, move}`, `take-host`, `take-owner`, `leave`, `owner {op: start | rematch | lock |
-unlock | kick | cpu | size | close}`. Host → room: `state {seq, turn, views, public, snapshot}`, `refused {seat, reason}`,
-`end {places}`, `crash`. Room → device: `welcome {seat, seatToken?, owner, room}`, `seats {room}`,
+**Messages** (JSON, `v: 2`). Device → room: `hello {nick, seatToken?, ownerToken?, table?}`,
+`move {seq, move}`, `take-host`, `leave`, `control {op: start | rematch | lock |
+unlock | kick | cpu | size | close}` (the host only). Host → room: `state {seq, turn, views, public, snapshot}`, `refused {seat, reason}`,
+`end {places}`, `crash`. Room → device: `welcome {seat, seatToken?, room}`, `seats {room}`,
 `start {match, seed, seats}` and `host {match, snapshot}` (to the host), `move {seat, seq, move}`
 (to the host), `view {data}` (a seat's own), `public {data}` (spectators), `refused {reason}`, `end
 {places}`, `crash`, `closed {reason}`, `error {code, text}` (`kicked`, `replaced`, `full`,
 `version`, `nick`, `rate`, `big`, `role`…). The room stamps the sender's seat on each move and
 refuses one out of turn or with an old `seq` itself (it reads `seq` and `turn` from `state`).
 
-**The host** is the owner's device by default. Its engine runs on a local bus; online.js sends each
+**The host** is the member's device at first. Its engine runs on a local bus; online.js sends each
 round's views, the public view and `snapshot()` to the room as one `state`, gives the host's own
-seat its view directly, and passes the room's moves to the engine. When the host's socket closes,
-the room makes the next online player the host and sends it the snapshot; **Make me host** does the
-same. A device back after a drop says hello with its token and gets its seat and latest view.
+seat its view directly, and passes the room's moves to the engine. When the host taps Leave, the
+room makes the next online player the host at once and sends it the snapshot; when the host's
+socket only closes, the room waits 30 s first (moves get "Waiting for the host…"), and **Make me
+host** ends the wait. A device back after a drop says hello with its token and gets its seat and
+latest view.
 
 **Hub DO** (`src/worker/objects/hub.ts`, SQL in `hub-sql.ts`), one, `getByName("hub")`: tables
 `catalog (game, enabled, featured, sort)` (a game with no row is on), `rooms (code, game, member,

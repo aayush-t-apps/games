@@ -14,7 +14,9 @@ task: aayush-t-apps/shipify#625
 The owner (2026-10-31): Back leaves the app instead of going one screen back; nobody can see
 whether they are signed in; "Make it a person" adds a "player" who never joined; online parts show
 where they don't help, and joining doesn't feel natural. They also asked for Sudoku with levels to
-master, and a crossword of today or of a picked topic.
+master, and a crossword of today or of a picked topic. Later the same day: a room's "owner" and
+"host" are one idea too many ("we don't need that complexity"): a member starts, guests join, all
+play.
 
 ## Spec changes
 
@@ -54,10 +56,16 @@ master, and a crossword of today or of a picked topic.
   player**, with a chime when someone sits down.
 - The game interface: `init(seats, seed, pick)`; a puzzle's rules say `puzzle: true`, and its
   `index.json` entry has `pick` (`label`, `options`, and `daily` for the option seeded by the date).
+- AC5.3, AC5.5, AC6.2, AC6.5: one **Host** role in a room. The member who starts it is the host:
+  their device runs the rules and has the controls. **Leave the room** passes the role at once; a
+  dropped host device holds the moves ("Waiting for the host…") for 30 s, then the next online
+  player is the host. **Make me host** only while the host is away.
 
 ### Removed
 
 - The hub's **Invite friends** button on each game, and **Make it a person**.
+- The room owner: the owner tag, **Make me the owner**, the 2-minute owner wait, and the
+  `take-owner` message (`owner` becomes `control`).
 
 ## Alternatives considered
 
@@ -83,8 +91,11 @@ master, and a crossword of today or of a picked topic.
 
 - `engine.js` passes `pick` to `init`. `store.js` takes any short level id (`[a-z-]`), so a
   puzzle's pick is its level. `app.js` adds history entries (`{s, game, d}`) and `route()` reads
-  them; `home()` goes back `d` entries. Online play is unchanged: puzzles have one player, so they
-  have no rooms, and the room and Hub change nothing.
+  them; `home()` goes back `d` entries. Puzzles have one player, so they have no rooms.
+- The room keeps one `host` seat and `hostAway` (was `host`, `ownerSeat`, `ownerAway`).
+  `hostDropped`, `hostDue` and `takeHost` in `room-logic.ts` hold the rules; the room's one alarm
+  rings at `hostAway + HOST_WAIT_MS` (30 s). `PROTOCOL` is 2 in `engine.js` and `room-logic.ts`.
+  The Hub changes nothing.
 - Each puzzle is a folder of `rules.js` and `view.js`, loaded only when played. Sudoku makes its
   grid from the seed (a solver checks one solution and grades it). Crossword's word bank is in its
   `rules.js`; the grid is built from the seed, and Today's seed is the device's date (20261031).
@@ -94,6 +105,8 @@ master, and a crossword of today or of a picked topic.
 - Ships with the release; nothing new is stored on the server. Scores of a puzzle stay in the
   browser under its pick. A rollback restores the previous version; old code reads those scores
   as broken and starts the scores blank, so roll forward instead.
+- A room live during the deploy keeps its current host (`upgrade()` drops the owner fields). A tab
+  open on the old release gets "This app is out of date. Reload to update." once.
 
 ## Docs and clean-up
 
@@ -110,9 +123,12 @@ master, and a crossword of today or of a picked topic.
   verifies: AC11.3
 - [x] T3 [US11] Sudoku — files: `site/games/sudoku/` — verifies: AC11.1
 - [x] T4 [US11] Crossword — files: `site/games/crossword/` — verifies: AC11.2
+- [x] T5 [US5] One Host role in rooms — files: `src/worker/room-logic.ts`,
+  `src/worker/objects/room.ts`, `site/lib/online.js`, `site/lib/net/room.js`,
+  `site/lib/engine.js`, `site/lib/app.css` — verifies: AC5.3, AC5.5, AC6.2, AC6.5
 
 ## Verification
 
 - `make verify` passes (`games.test.ts` with both puzzles and every pick, `engine.test.ts`,
-  `store.test.ts`, `games.spec.ts`, `online.spec.ts`). `docs/spec.md` is updated to match this
+  `store.test.ts`, `room-logic.test.ts`, `objects.test.ts`, `games.spec.ts`, `online.spec.ts`). `docs/spec.md` is updated to match this
   change.

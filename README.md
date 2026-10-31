@@ -17,15 +17,15 @@ Open **https://games.app.a69x.in**.
    link**). Friends open the link, or type the code under **Join friends** on the games page
    and tap **Join**, then type a nickname.
    A TV or a big screen can tap **Join as Table** to show the board to everyone.
-3. The room's owner taps **Start**. The owner's device runs the match. If it drops, the next
-   device takes over; any player can tap **Make me host** (a laptop on Wi-Fi is steadier than a
-   phone). A device that drops reconnects by itself, and a player away for 60 s on their turn is
-   played by the CPU until they're back.
-4. At the end, everyone sees the places, the owner can tap **Rematch**, and **Scores** shows each
+3. The room's **host** (the member who started it) taps **Start**. The host's device runs the
+   match and has the controls. If it drops or sleeps, the game shows "Waiting for the host…"; if
+   it isn't back within 30 seconds, the next player becomes the host and the game goes on. While
+   the host is away, any player can tap **Make me host**. A device that drops reconnects by
+   itself, and a player away for 60 s on their turn is played by the CPU until they're back.
+4. At the end, everyone sees the places, the host can tap **Rematch**, and **Scores** shows each
    game's top players and last 20 online matches.
-5. **Leave the room** opens your seat for someone else. When the owner leaves, the next player
-   gets the owner's controls. When the owner's phone only drops or sleeps, the controls wait 2
-   minutes for it, then pass on; meanwhile any player can tap **Make me the owner**.
+5. **Leave the room** opens your seat for someone else. When the host leaves, the next player
+   becomes the host at once.
 
 Rooms end by themselves 6 hours after they start, or 10 minutes after everyone leaves. Up to 8
 players and 8 watchers a room.
