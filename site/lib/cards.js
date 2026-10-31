@@ -191,7 +191,15 @@ export function emblem(id) {
     "card-lines": `<g transform="rotate(-10 24 26)"><rect x="12" y="4" width="28" height="40" rx="4" fill="#fffdf7" stroke="${c.ink}" stroke-width="1.5"/><text x="16" y="20" font-size="14" font-weight="800" fill="${c.ink}">J</text>${suitShape("D", 25, 26, 11)}</g><circle cx="50" cy="22" r="6" fill="${c.red}" stroke="${c.paper}" stroke-width="1.5"/>${[0, 1, 2, 3, 4]
       .map((i) => `<circle cx="${8 + i * 12}" cy="55" r="5" fill="${c.blue}" stroke="${c.paper}" stroke-width="1.5"/>`)
       .join("")}`,
-    "quiz-race": `<path d="M6 50h52" stroke="${c.paper}" stroke-width="3" stroke-dasharray="6 4"/><circle cx="18" cy="44" r="6" fill="${c.red}"/><circle cx="32" cy="44" r="6" fill="${c.blue}"/><path d="M52 18v32" stroke="${c.paper}" stroke-width="3"/><path d="M52 18h-14l4 6-4 6h14Z" fill="${c.yellow}"/><text x="14" y="30" font-size="22" font-weight="800" fill="${c.paper}">?</text>`,
+    "snakes-ladders": `<rect x="6" y="6" width="52" height="52" rx="4" fill="#fffdf7"/>${[0, 1, 2, 3]
+      .map((x) =>
+        [0, 1, 2, 3]
+          .filter((y) => (x + y) % 2)
+          .map((y) => `<rect x="${6 + x * 13}" y="${6 + y * 13}" width="13" height="13" fill="#f1e3c8"/>`)
+          .join(""),
+      )
+      .join("")}<path d="M14 54 30 12M24 56 40 14M17 46l10 3.5M20 38l10 3.5M23 30l10 3.5M26 22l10 3.5" stroke="${c.wood}" stroke-width="3" stroke-linecap="round"/><path d="M48 12c-10 6 8 14-2 22s6 14-6 20" stroke="${c.green}" stroke-width="5" stroke-linecap="round" fill="none"/><circle cx="48" cy="12" r="4.5" fill="${c.green}"/><circle cx="46.5" cy="11" r="1.1" fill="#fff"/><circle cx="49.5" cy="11" r="1.1" fill="#fff"/>`,
+    "quiz-race":`<path d="M6 50h52" stroke="${c.paper}" stroke-width="3" stroke-dasharray="6 4"/><circle cx="18" cy="44" r="6" fill="${c.red}"/><circle cx="32" cy="44" r="6" fill="${c.blue}"/><path d="M52 18v32" stroke="${c.paper}" stroke-width="3"/><path d="M52 18h-14l4 6-4 6h14Z" fill="${c.yellow}"/><text x="14" y="30" font-size="22" font-weight="800" fill="${c.paper}">?</text>`,
     sudoku: `<rect x="6" y="6" width="52" height="52" rx="4" fill="#fffdf7"/><path d="M23.3 6v52M40.6 6v52M6 23.3h52M6 40.6h52" stroke="${c.ink}" stroke-width="2"/><text x="10" y="20" font-size="12" font-weight="800" fill="${c.ink}">5</text><text x="28" y="37" font-size="12" font-weight="800" fill="${c.blue}">3</text><text x="45" y="54" font-size="12" font-weight="800" fill="${c.red}">9</text>`,
     crossword: `${[0, 1, 2, 3]
       .map((x) =>

@@ -11,6 +11,7 @@ import goFish from "../../site/games/go-fish/rules.js";
 import ludo from "../../site/games/ludo/rules.js";
 import memory from "../../site/games/memory/rules.js";
 import quizRace from "../../site/games/quiz-race/rules.js";
+import snakesLadders from "../../site/games/snakes-ladders/rules.js";
 import sudoku from "../../site/games/sudoku/rules.js";
 
 type Move = Record<string, unknown>;
@@ -35,6 +36,7 @@ const GAMES = [
   goFish,
   memory,
   ludo,
+  snakesLadders,
   fourInARow,
   cardLines,
   quizRace,
@@ -179,12 +181,13 @@ describe("the game list (AC1.1)", () => {
   }[];
   const folders = readdirSync(DIR).filter((f) => statSync(join(DIR, f)).isDirectory());
 
-  it("lists the nine games in order, one entry per folder", () => {
+  it("lists the ten games in order, one entry per folder", () => {
     expect(list.map((g) => g.name)).toEqual([
       "Four in a Row",
       "Wild Jacks",
       "Sudoku",
       "Ludo",
+      "Snakes and Ladders",
       "Crazy Eights",
       "Go Fish",
       "Memory",

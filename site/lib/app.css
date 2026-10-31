@@ -966,6 +966,71 @@ button.piece {
   height: 64px;
 }
 
+/* Snakes and Ladders */
+.sl {
+  width: min(100%, 34rem, 52dvh);
+}
+.sl-wrap {
+  position: relative;
+  aspect-ratio: 10 / 11;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 3px solid var(--ink);
+}
+.sl-board {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.sl-board text {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.sl-spot {
+  position: absolute;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 3px var(--glow);
+  background: rgb(224 168 0 / 0.25);
+}
+.sl-piece {
+  position: absolute;
+  z-index: 2;
+}
+/* --dx and --dy are in token widths, so a moved token slides from its last place. */
+.sl-piece.slid {
+  animation: slid 0.45s ease-out;
+}
+.sl-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+.sl-dice {
+  display: flex;
+  gap: 0.5rem;
+}
+.sl-roll .die-face {
+  display: block;
+  width: 44px;
+  height: 44px;
+}
+.sl-picks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+}
+.sl-pick {
+  display: grid;
+  justify-items: center;
+  line-height: 1.2;
+  padding: 0.3rem 0.6rem;
+}
+.sl-pick small {
+  font-weight: 600;
+}
+
 /* Quiz Race */
 .question {
   font-size: clamp(1.6rem, 8cqi, 2.8rem);

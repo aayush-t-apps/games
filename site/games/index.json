@@ -78,6 +78,23 @@
     ]
   },
   {
+    "id": "snakes-ladders",
+    "name": "Snakes and Ladders",
+    "type": "board",
+    "players": [2, 4],
+    "cpu": true,
+    "ages": "4+",
+    "teaching": true,
+    "version": 1,
+    "kb": 12,
+    "about": "Roll two dice and pick your move. Climb the ladders, miss the snakes. First to 100 wins.",
+    "how": [
+      "Roll two dice. Then pick one die, the other, or both added: the squares they reach glow.",
+      "Land on a ladder's foot to climb it. Land on a snake's head and slide down to its tail.",
+      "Reach 100 with an exact count to win. A pick that goes past 100 isn't allowed."
+    ]
+  },
+  {
     "id": "crazy-eights",
     "name": "Crazy Eights",
     "type": "cards",

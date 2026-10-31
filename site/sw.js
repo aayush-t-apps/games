@@ -3,7 +3,7 @@
 // test checks it): bump it with every release, so the new release installs as a new worker.
 // Online play (change 0002) goes to the network: /api/*, and the sign-in pages /member and /admin,
 // which Cloudflare Access guards. Only /api/catalog is kept, the last one, for offline.
-const VERSION = "0.6.1";
+const VERSION = "0.7.0";
 const CACHE = `games-${VERSION}`;
 const SHELL = [
   "/",

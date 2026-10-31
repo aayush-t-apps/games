@@ -5,6 +5,14 @@ Versions: [Semantic Versioning](https://semver.org/). Change docs: `docs/changes
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-31
+
+### Added
+
+- Snakes and Ladders for 2 to 4 players: roll two dice, then move by one die, the other or both
+  added; the squares each pick reaches glow; ladders up, snakes down, an exact count to 100. CPU
+  on easy, normal and hard, pass-and-play and online rooms (docs/changes/0008-snakes-and-ladders.md).
+
 ## [0.6.1] - 2026-10-31
 
 ### Changed

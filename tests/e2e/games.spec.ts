@@ -6,6 +6,7 @@ const GAMES = [
   "Wild Jacks",
   "Sudoku",
   "Ludo",
+  "Snakes and Ladders",
   "Crazy Eights",
   "Go Fish",
   "Memory",
@@ -28,13 +29,13 @@ const turn = (page: Page) => page.locator("#turn");
 const freeColumn = (page: Page) =>
   page.getByRole("button", { name: /^Column \d, \d free$/ }).first();
 
-test("the hub lists the nine games with their type, players and ages (AC1.1)", async ({ page }) => {
+test("the hub lists the ten games with their type, players and ages (AC1.1)", async ({ page }) => {
   await open(page);
   const boxes = page.locator(".shelf > li");
   await expect(boxes.locator("h2")).toHaveText(GAMES);
   await expect(boxes.first()).toContainText("Board game. 2 players. Ages 5+.");
   await expect(boxes.nth(2)).toContainText("Puzzle. 1 player. Ages 8+.");
-  await expect(boxes.nth(4)).toContainText("Cards. 2–6 players. Ages 6+.");
+  await expect(boxes.nth(5)).toContainText("Cards. 2–6 players. Ages 6+.");
   // Every game has its picture on its box.
   await expect(boxes.locator(".lid svg.emblem > :first-child")).toHaveCount(GAMES.length);
 });
@@ -57,6 +58,25 @@ test("Wild Jacks: a picked card's squares glow, a tap puts a chip there, and the
   await expect(page.locator("#live")).toHaveText(/^Player played .+ on row \d+, column \d+/);
   await expect(page.locator(".cl-cell[aria-label*='Blue chip']")).toHaveCount(1);
   await expect(page.locator("#live")).toHaveText(/^CPU 1 (played|took|traded)/);
+  await expect(turn(page)).toHaveText("Your turn");
+});
+
+test("Snakes and Ladders: roll two dice, the picks' squares glow, a pick moves the token (change 0008)", async ({
+  page,
+}) => {
+  await open(page);
+  await setup(page, "Snakes and Ladders");
+  await page.getByRole("button", { name: "Start" }).click();
+  await expect(turn(page)).toHaveText("Your turn");
+  await page.getByRole("button", { name: "Roll the dice" }).click();
+  // From the start every pick fits: one die, the other, or both added (one or two picks).
+  const picks = page.locator(".sl-pick");
+  await expect(picks.first()).toBeVisible();
+  await expect(page.locator(".sl-spot")).toHaveCount(await picks.count());
+  await picks.first().click();
+  await expect(page.locator("#live")).toHaveText(/^Player (moved|climbed|slid)/);
+  await expect(page.locator(".sl-piece").first()).not.toHaveAttribute("aria-label", /at the start/);
+  await expect(page.locator("#live")).toHaveText(/^CPU 1 /);
   await expect(turn(page)).toHaveText("Your turn");
 });
 
@@ -208,7 +228,7 @@ test("plays offline after Download all (AC3.1, AC3.2)", async ({ page, context }
   await expect(page.locator(".shelf h2")).toHaveText(GAMES);
   await expect(page.getByText("Needs signal once").filter({ visible: true })).toHaveCount(0);
   const plays = page.getByRole("button", { name: /^Play / });
-  await expect(plays).toHaveCount(9);
+  await expect(plays).toHaveCount(GAMES.length);
   for (const play of await plays.all()) await expect(play).toBeEnabled();
   await setup(page, "Memory");
   await page.getByRole("button", { name: "Start" }).click();
