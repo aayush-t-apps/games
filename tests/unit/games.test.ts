@@ -181,14 +181,14 @@ describe("the game list (AC1.1)", () => {
 
   it("lists the nine games in order, one entry per folder", () => {
     expect(list.map((g) => g.name)).toEqual([
+      "Four in a Row",
+      "Wild Jacks",
+      "Sudoku",
+      "Ludo",
       "Crazy Eights",
       "Go Fish",
       "Memory",
-      "Ludo",
-      "Four in a Row",
-      "Card Lines",
       "Quiz Race",
-      "Sudoku",
       "Crossword",
     ]);
     expect(list.map((g) => g.id).sort()).toEqual(folders.sort());

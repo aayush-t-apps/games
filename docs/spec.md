@@ -26,8 +26,8 @@ the rules), counting solo play on the server.
 
 - **US1 (P1): Play a game against the CPU**. As anyone, I want to pick a game and play it against
   CPU players, so that I can play alone on any device.
-  - AC1.1 WHEN I open `/` THE APP SHALL list the nine games (Crazy Eights, Go Fish, Memory, Ludo,
-    Four in a Row, Card Lines, Quiz Race, Sudoku, Crossword) from `site/games/index.json`, each with its type,
+  - AC1.1 WHEN I open `/` THE APP SHALL list the nine games (Four in a Row, Wild Jacks, Sudoku, Ludo,
+    Crazy Eights, Go Fish, Memory, Quiz Race, Crossword), in that order, from `site/games/index.json`, each with its type,
     players and ages.
   - AC1.2 WHEN I start a game with 1 human and 1–5 CPU seats (within the game's player range) and a
     level (easy, normal, hard) THE APP SHALL play the match to the end, with CPU moves after a short
@@ -170,7 +170,7 @@ the rules), counting solo play on the server.
     books, Words, or A mix) it SHALL build a new grid from that topic's words and clues.
   - AC11.3 WHEN I play a puzzle THE APP SHALL show **Hint** (one right step) and **Undo**, keep the
     score under its pick (a level or a topic), and say "Solved!" at the end.
-- **US12 (P2): Card Lines, a card-and-board game for more players** (change 0007). As a family or
+- **US12 (P2): Wild Jacks, a card-and-board game for more players** (change 0007). As a family or
   friends, I want a Sequence-style game for 2 to 4, so that more of us play one match together.
   - AC12.1 WHEN I tap a card in my hand THE APP SHALL make its open squares glow, and a tap on one
     puts my chip there and draws me a new card; a tap on a square that shows a card I hold plays it.
@@ -331,7 +331,7 @@ only `store.js` touches `localStorage`.
 | Memory | kids | 1–4 | Pairs face down; a match scores and plays again. CPU recall by level |
 | Ludo | board | 2–4 | A 6 leaves base, captures, safe squares, a 6 plays again (a third 6 ends the turn), an exact roll to finish; the first with four tokens home wins |
 | Four in a Row | board | 2 | 7×6 grid. The owner's "Connect 4", named generically (no trade names) |
-| Card Lines | board | 2–4 | The owner's "Sequence", named generically. Two decks; a 10×10 board of every card but the jacks twice (square i and 99 − i) and four free corners; hands of 7 (2 players) or 6. Lines of five; four play in pairs. Jacks wild (two eyes) or take a chip (one eye); dead cards trade in. A full board ends it |
+| Wild Jacks | board | 2–4 | The owner's "Sequence", named generically (id `card-lines`, its first name, kept so scores and rooms stay). Two decks; a 10×10 board of every card but the jacks twice (square i and 99 − i) and four free corners; hands of 7 (2 players) or 6. Lines of five; four play in pairs. Jacks wild (two eyes) or take a chip (one eye); dead cards trade in. A full board ends it |
 | Quiz Race | kids | 1–4 | Answer a question (maths made from the seed, or a short JSON pack of kids' facts); right moves you a step on a 10-step track; first home wins. CPU right by level (60, 80, 95 %) |
 | Sudoku | puzzles | 1 | A grid made from the seed with one solution, graded Easy (naked singles), Medium (hidden singles), Hard and Expert (more, fewer givens); notes, repeats in red, a mistakes count. Hint: the next cell a person would find |
 | Crossword | puzzles | 1 | A grid of about 9–12 words built from the seed out of a built-in word bank (Animals, Food, World, Science, Sports, Music, films and books, Words; A mix; Today's: all topics, seeded by the date). Hint: one right letter |
@@ -435,7 +435,7 @@ kb, about, how` (`how`: the 2 to 4 steps of its How to play card), and for a puz
 every device gets the same puzzle that day). A unit test checks that every folder has an entry, holds only `rules.js` and
 `view.js`, and that `kb` matches the folder's size (rounded up).
 
-**The CPU levels.** Card Lines' CPU scores each square by the stretches of five it builds and
+**The CPU levels.** Wild Jacks' CPU scores each square by the stretches of five it builds and
 blocks: easy takes a winning square, else any move; normal blocks every stretch; hard blocks only
 a stretch where another colour has three, and keeps its jacks longer. Four in a Row searches 1, 3 or 6 moves ahead (easy, normal, hard). Memory's CPU
 remembers each card it saw with a 35, 70 or 95 % chance. Quiz Race's CPU is right 60, 80 or 95

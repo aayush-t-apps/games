@@ -1,4 +1,4 @@
-// Card Lines' screen: the 10 × 10 board of cards with the chips on it, and your hand below it.
+// Wild Jacks' screen: the 10 × 10 board of cards with the chips on it, and your hand below it.
 // Tap a card and its open squares glow, then tap one; or tap a square that shows a card you hold.
 import { COLORS, cardFace, suitShape } from "../../lib/cards.js";
 import { spoken } from "../../lib/deck.js";

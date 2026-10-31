@@ -2,14 +2,14 @@
 import { expect, type Page, test } from "@playwright/test";
 
 const GAMES = [
+  "Four in a Row",
+  "Wild Jacks",
+  "Sudoku",
+  "Ludo",
   "Crazy Eights",
   "Go Fish",
   "Memory",
-  "Ludo",
-  "Four in a Row",
-  "Card Lines",
   "Quiz Race",
-  "Sudoku",
   "Crossword",
 ];
 
@@ -32,16 +32,18 @@ test("the hub lists the nine games with their type, players and ages (AC1.1)", a
   await open(page);
   const boxes = page.locator(".shelf > li");
   await expect(boxes.locator("h2")).toHaveText(GAMES);
-  await expect(boxes.first()).toContainText("Cards. 2–6 players. Ages 6+.");
-  await expect(boxes.nth(2)).toContainText("Kids. 1–4 players. Ages 3+.");
-  await expect(boxes.nth(7)).toContainText("Puzzle. 1 player. Ages 8+.");
+  await expect(boxes.first()).toContainText("Board game. 2 players. Ages 5+.");
+  await expect(boxes.nth(2)).toContainText("Puzzle. 1 player. Ages 8+.");
+  await expect(boxes.nth(4)).toContainText("Cards. 2–6 players. Ages 6+.");
+  // Every game has its picture on its box.
+  await expect(boxes.locator(".lid svg.emblem > :first-child")).toHaveCount(GAMES.length);
 });
 
-test("Card Lines: a picked card's squares glow, a tap puts a chip there, and the CPU plays (change 0007)", async ({
+test("Wild Jacks: a picked card's squares glow, a tap puts a chip there, and the CPU plays (change 0007)", async ({
   page,
 }) => {
   await open(page);
-  await setup(page, "Card Lines");
+  await setup(page, "Wild Jacks");
   await page.getByRole("button", { name: "Start" }).click();
   await expect(page.locator("#board .cl-cell")).toHaveCount(100);
   await expect(turn(page)).toHaveText("Your turn");

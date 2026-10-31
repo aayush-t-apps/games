@@ -5,6 +5,13 @@ Versions: [Semantic Versioning](https://semver.org/). Change docs: `docs/changes
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-10-31
+
+### Changed
+
+- Card Lines is now **Wild Jacks**, with its own picture on its box. The hub lists Four in a Row,
+  Wild Jacks, Sudoku and Ludo first.
+
 ## [0.6.0] - 2026-10-31
 
 ### Added
