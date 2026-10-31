@@ -200,7 +200,7 @@ test("the admin page opens on the Overview, with its four tabs (AC8.1)", async (
   await expect(firstGame).toHaveText("Memory");
   await size.getByRole("button").click();
   await expect(size).toHaveAttribute("aria-sort", "descending");
-  await expect(firstGame).toHaveText("Ludo");
+  await expect(firstGame).toHaveText("Crossword");
 
   await page.getByRole("tab", { name: "Games" }).click();
   await expect(page.getByRole("button", { name: "Move Ludo up" })).toBeVisible();

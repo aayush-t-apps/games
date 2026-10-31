@@ -110,7 +110,7 @@
     "ages": "8+",
     "teaching": true,
     "version": 1,
-    "kb": 0,
+    "kb": 18,
     "about": "Fill the grid so each row, column and box has 1 to 9 once. Four levels.",
     "how": [
       "Tap a square, then a number. Each row, column and 3×3 box holds 1 to 9 once.",
@@ -136,7 +136,7 @@
     "ages": "8+",
     "teaching": true,
     "version": 1,
-    "kb": 0,
+    "kb": 30,
     "about": "Today's puzzle, or pick a topic. Read the clue and fill in the word.",
     "how": [
       "Tap a square. Tap it again to go across or down. The clue shows above the grid.",
