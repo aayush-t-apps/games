@@ -51,16 +51,15 @@ export function setScreen(name) {
 }
 
 // ---------- Back ----------
-// Each screen over the hub is a history entry (`d`: its depth: Setup 1, a match 2), so the
+// Each screen over the hub is a history entry (`d`: how many entries above the hub), so the
 // browser's or the phone's Back goes one screen back and leaves the app only from the hub.
 
 /** The history entry for a screen: a new one, or this one again (Play again keeps it). */
 function mark(s, game) {
-  const state = { s, game, d: s === "setup" ? 1 : 2 };
   const now = history.state;
   if (now?.s === s && now?.game === game) return;
-  if (now?.s === "match" && s === "match") history.replaceState(state, "", "/");
-  else history.pushState(state, "", "/");
+  if (now?.s === "match" && s === "match") history.replaceState({ s, game, d: now.d }, "", "/");
+  else history.pushState({ s, game, d: (now?.d ?? 0) + 1 }, "", "/");
 }
 
 /** Back to the hub: through history when the screens above it are entries, so Back stays right. */
@@ -1072,11 +1071,12 @@ function route() {
   const at = history.state;
   // Back from a match in play asks first; No keeps the match, and its entry comes back.
   if (match && !match.ended && !match.online && at?.s !== "match") {
-    if (!window.confirm(LEAVE)) return history.pushState({ s: "match", game: match.g.id, d: 2 }, "", "/");
+    if (!window.confirm(LEAVE)) return history.pushState({ s: "match", game: match.g.id, d: (at?.d ?? 0) + 1 }, "", "/");
     stopMatch();
   }
   const g = at?.game ? gameById(at.game) : null;
-  if (g && at.s === "match") history.replaceState({ s: "setup", game: g.id, d: 1 }, "", "/");
+  // A match's entry with no match (a reload, Forward): its Setup, at the same depth for home().
+  if (g && at.s === "match") history.replaceState({ s: "setup", game: g.id, d: at.d }, "", "/");
   if (g) showSetup(g, undefined, true);
   else if (screen !== "hub") showHub();
 }

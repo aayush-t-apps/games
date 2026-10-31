@@ -239,7 +239,10 @@ test("the name typed on Setup is kept for next time", async ({ page }) => {
   await page.getByLabel("You", { exact: true }).fill("Sam");
   await page.getByRole("button", { name: "Start" }).click();
   await expect(page.locator("#board")).toBeVisible();
-  await page.goto("/");
+  // A reload isn't kept as a match: it opens that game's Setup (AC10.1).
+  await page.reload();
+  await expect(page.getByRole("heading", { level: 1, name: "Memory" })).toBeVisible();
+  await page.getByRole("button", { name: "Back to games" }).click();
   await setup(page, "Ludo");
   await expect(page.getByLabel("You", { exact: true })).toHaveValue("Sam");
 });
