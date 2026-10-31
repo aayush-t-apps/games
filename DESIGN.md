@@ -9,7 +9,7 @@ a laptop, or a TV browser. The one job: pick a game and be playing in two taps, 
 
 | Screen | Primary action |
 |---|---|
-| Hub: "Pick a game", Join friends (a code), the shelf of nine games, scores, install | **Play** (one per game) |
+| Hub: "Pick a game", Join friends (a code), the shelf of ten games, scores, install | **Play** (one per game) |
 | Setup: How to play, a puzzle's pick, seats (you, then CPU or Person here), CPU level, kid mode, Play with friends | **Start** |
 | Match: the felt table, the players, the moves | play a move |
 | Result: the places | **Play again** |
@@ -80,7 +80,8 @@ Big, crisp cards and pieces, drawn by code in SVG, that move with a short slide:
 cards, tiles or answers are dealt in one after another, a played card slides onto the pile, a card
 you draw or get slides into your hand, a disc drops down its column, a Memory tile flips and a
 found pair glows as it leaves, a Ludo token slides to its square and a captured one flies back to
-its base, the die rolls, a winning Four in a Row line shines, a Wild Jacks chip drops onto its
+its base, the die rolls, a Snakes and Ladders token slides to its square (and up a ladder or down
+a snake), a winning Four in a Row line shines, a Wild Jacks chip drops onto its
 square and a new line of five shines. Everything else stays quiet: flat
 colour, no shadows, no gradients.
 

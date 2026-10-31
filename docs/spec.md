@@ -6,7 +6,7 @@
 ## Goal
 
 A game room for family, kids and friends at `games.app.a69x.in`. Anyone opens it in a browser on a
-phone, tablet, laptop or TV, or installs it as an app, and plays seven classic games solo against the
+phone, tablet, laptop or TV, or installs it as an app, and plays eight classic games solo against the
 CPU or pass-and-play on one device, offline, and two puzzles (Sudoku, Crossword). Kid mode teaches. Scores stay in that browser. Members
 (signed in with Cloudflare Access) start online rooms; anyone joins one by link, code or QR code
 with a nickname, from any device, and the online scores are shared. The owner runs it from
@@ -26,8 +26,8 @@ the rules), counting solo play on the server.
 
 - **US1 (P1): Play a game against the CPU**. As anyone, I want to pick a game and play it against
   CPU players, so that I can play alone on any device.
-  - AC1.1 WHEN I open `/` THE APP SHALL list the nine games (Four in a Row, Wild Jacks, Sudoku, Ludo,
-    Crazy Eights, Go Fish, Memory, Quiz Race, Crossword), in that order, from `site/games/index.json`, each with its type,
+  - AC1.1 WHEN I open `/` THE APP SHALL list the ten games (Four in a Row, Wild Jacks, Sudoku, Ludo,
+    Snakes and Ladders, Crazy Eights, Go Fish, Memory, Quiz Race, Crossword), in that order, from `site/games/index.json`, each with its type,
     players and ages.
   - AC1.2 WHEN I start a game with 1 human and 1–5 CPU seats (within the game's player range) and a
     level (easy, normal, hard) THE APP SHALL play the match to the end, with CPU moves after a short
@@ -184,6 +184,14 @@ the rules), counting solo play on the server.
     squares are taken is dead, and a tap trades it in, once a turn, and the turn goes on.
   - AC12.5 WHEN the board is full THE APP SHALL end the match: the most lines first, then the
     longest row of chips.
+- **US13 (P2): Snakes and Ladders, a race with a choice** (change 0008). As a family or kids, I
+  want a simple dice race where my pick matters, so that we all play and still think.
+  - AC13.1 WHEN I roll THE APP SHALL roll two dice and offer each die and both added (each number
+    once) as a button, with where it ends, and make the squares they reach glow.
+  - AC13.2 WHEN a token ends on a ladder's foot THE APP SHALL take it up to the ladder's top; on a
+    snake's head, down to its tail; and say so ("climbed a ladder from 4 to 25").
+  - AC13.3 WHEN a pick goes past 100 THE APP SHALL not offer it; WHEN no pick fits THE APP SHALL
+    say so and pass the turn. The first token on 100 wins; the others are placed by their square.
 
 ## UI
 
@@ -322,7 +330,7 @@ move or the room says it's back (AC6.6).
 The import rule, checked by a unit test: `rules.js` imports only `site/lib/{rng,deck,board}.js`;
 only `store.js` touches `localStorage`.
 
-**The nine games** (all `realtime: false`):
+**The ten games** (all `realtime: false`):
 
 | Game | Type | Players | Notes |
 |---|---|---|---|
@@ -330,6 +338,7 @@ only `store.js` touches `localStorage`.
 | Go Fish | cards | 2–6 | Ask a seat for a rank; books of four; most books wins |
 | Memory | kids | 1–4 | Pairs face down; a match scores and plays again. CPU recall by level |
 | Ludo | board | 2–4 | A 6 leaves base, captures, safe squares, a 6 plays again (a third 6 ends the turn), an exact roll to finish; the first with four tokens home wins |
+| Snakes and Ladders | board | 2–4 | A 10 × 10 board of our own layout (7 ladders, 9 snakes). Roll two dice, then move by one die, the other, or both added; an exact count to 100; the first on 100 wins |
 | Four in a Row | board | 2 | 7×6 grid. The owner's "Connect 4", named generically (no trade names) |
 | Wild Jacks | board | 2–4 | The owner's "Sequence", named generically (id `card-lines`, its first name, kept so scores and rooms stay). Two decks; a 10×10 board of every card but the jacks twice (square i and 99 − i) and four free corners; hands of 7 (2 players) or 6. Lines of five; four play in pairs. Jacks wild (two eyes) or take a chip (one eye); dead cards trade in. A full board ends it |
 | Quiz Race | kids | 1–4 | Answer a question (maths made from the seed, or a short JSON pack of kids' facts); right moves you a step on a 10-step track; first home wins. CPU right by level (60, 80, 95 %) |
@@ -439,7 +448,9 @@ every device gets the same puzzle that day). A unit test checks that every folde
 blocks: easy takes a winning square, else any move; normal blocks every stretch; hard blocks only
 a stretch where another colour has three, and keeps its jacks longer. Four in a Row searches 1, 3 or 6 moves ahead (easy, normal, hard). Memory's CPU
 remembers each card it saw with a 35, 70 or 95 % chance. Quiz Race's CPU is right 60, 80 or 95
-times in 100. The card games and Ludo use simple rules that get smarter by level.
+times in 100. Snakes and Ladders' CPU picks at random (easy), the pick that ends highest
+(normal), or the one whose next roll looks best on average (hard). The card games and Ludo use
+simple rules that get smarter by level.
 
 ### Failure modes
 
