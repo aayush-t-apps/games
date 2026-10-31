@@ -2,7 +2,7 @@
 // checks and applies them, sends each seat its view, runs the CPU seats, and keeps `seq` and the
 // history for Undo. It never touches the DOM, so the same engine runs a solo match or a room.
 //
-// Messages (all with `v: 1`):
+// Messages (all with `v: PROTOCOL`):
 //   to the engine:   {t: "move", seat, seq, move} · {t: "undo", seat} · {t: "hint", seat}
 //   from the engine: {t: "view", seat, seq, turn, view, legal, note, last, places}, one per seat,
 //                    then {t: "public", seq, turn, view, legal: [], note, last, places}: the view
@@ -13,7 +13,7 @@
 // `from` goes on from it on a new host, and a seat that is away for `idleMs` on its turn is played
 // by the CPU until it's back.
 
-export const PROTOCOL = 1;
+export const PROTOCOL = 2;
 export const CRASH = "Something went wrong. Start again?";
 export const IDLE_MS = 60_000;
 
@@ -22,6 +22,7 @@ export const IDLE_MS = 60_000;
  * @param {object} o.game the rules (site/games/<id>/rules.js)
  * @param {{name: string, kind: "human" | "cpu", level?: string}[]} o.seats
  * @param {number} o.seed
+ * @param {string} [o.pick] a puzzle's choice from index.json's `pick` (a difficulty, a topic)
  * @param {{send: Function, onMessage: Function}} o.transport
  * @param {{state: object, seq: number, last: object | null, places: number[][] | null}} [o.from]
  *   a snapshot to go on from, instead of a new match
@@ -34,6 +35,7 @@ export function createEngine({
   game,
   seats,
   seed,
+  pick,
   transport,
   from,
   delay = 500,
@@ -41,7 +43,7 @@ export function createEngine({
   schedule = (fn, ms) => setTimeout(fn, ms),
   cancel = (handle) => clearTimeout(handle),
 }) {
-  let state = from ? from.state : game.init(seats.length, seed);
+  let state = from ? from.state : game.init(seats.length, seed, pick);
   let seq = from?.seq ?? 0;
   let last = from?.last ?? null;
   let places = from?.places ?? null;

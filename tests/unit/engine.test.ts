@@ -61,9 +61,22 @@ describe("engine", () => {
   it("sends each seat its view, with legal moves only for the seat to move", () => {
     const { engine, views } = setup(["human", "human"]);
     engine.start();
-    expect(views(0).at(-1)).toMatchObject({ v: 1, seq: 0, turn: 0, view: { total: 0 } });
+    expect(views(0).at(-1)).toMatchObject({ v: PROTOCOL, seq: 0, turn: 0, view: { total: 0 } });
     expect(views(0).at(-1)?.legal).toHaveLength(2);
     expect(views(1).at(-1)?.legal).toEqual([]);
+  });
+
+  it("starts a puzzle with its pick: a difficulty or a topic (change 0006)", () => {
+    const init = vi.fn(race.init);
+    const transport = createLocal([{ name: "P0", kind: "human" }]);
+    createEngine({
+      game: { ...race, init },
+      seats: [{ name: "P0", kind: "human" }],
+      seed: 7,
+      pick: "expert",
+      transport,
+    });
+    expect(init).toHaveBeenCalledWith(1, 7, "expert");
   });
 
   it("refuses an illegal move with a reason and keeps the state (AC1.5)", () => {

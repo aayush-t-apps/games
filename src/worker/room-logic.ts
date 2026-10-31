@@ -4,7 +4,7 @@
 // reads a game's moves, views or snapshot. The host device's engine runs the rules.
 import type { Level } from "./checks";
 
-export const PROTOCOL = 1;
+export const PROTOCOL = 2;
 export const CAPS = {
   seats: 8,
   spectators: 8,
@@ -19,8 +19,8 @@ export const CAPS = {
 /** A room ends 6 hours after it starts, or 10 minutes after its last device leaves. */
 export const LIFETIME_MS = 6 * 60 * 60 * 1000;
 export const EMPTY_MS = 10 * 60 * 1000;
-/** The owner role passes to the next player when the owner's device is away this long. */
-export const OWNER_WAIT_MS = 2 * 60 * 1000;
+/** The host role passes to the next player when the host's device is away this long. */
+export const HOST_WAIT_MS = 30 * 1000;
 
 export type Seat = { nick: string; cpu: boolean; token: string | null };
 export type Meta = {
@@ -38,14 +38,15 @@ export type Meta = {
   expires: number;
   /** Each seat keeps the hash of its device's token. Seat 0 is the member's. */
   seats: Seat[];
-  /** The seat with the owner's controls: seat 0 at first; it passes on (AC5.5). */
-  ownerSeat: number;
-  /** When the owner's device went away while other players stayed; null while it's here. */
-  ownerAway: number | null;
+  /**
+   * The host: the seat whose device runs the rules and has the controls. Seat 0 (the member) at
+   * first; it passes on (AC5.5, AC6.5).
+   */
+  host: number;
+  /** When the host's device went away while other players stayed; null while it's here. */
+  hostAway: number | null;
   /** The people seated, as the Hub last heard it (it's told only of a change). */
   reported: number;
-  /** The seat whose device runs the rules. */
-  host: number | null;
   locked: boolean;
   /** When the current match started; null in the lobby. */
   started: number | null;
@@ -100,18 +101,28 @@ export function newMeta(r: NewRoom): Meta {
     started: null,
     ended: false,
     match: 0,
-    ownerSeat: 0,
-    ownerAway: null,
+    hostAway: null,
     reported: 0,
   };
 }
 
-/** A room stored by 0.2.x, with the fields added since (a deploy keeps live rooms). */
-export function upgrade(m: Meta): Meta {
-  m.ownerSeat ??= 0;
-  m.ownerAway ??= null;
-  m.reported ??= -1;
-  return m;
+/** The fields an older room kept: an owner and a host (until 0.5.0), and no `reported`. */
+type Stored = Omit<Meta, "host" | "hostAway" | "reported"> &
+  Partial<Pick<Meta, "hostAway" | "reported">> & {
+    host: number | null;
+    ownerSeat?: number;
+    ownerAway?: number | null;
+  };
+
+/** A room stored by an older release, as this one keeps it (a deploy keeps live rooms). */
+export function upgrade(old: Stored): Meta {
+  const { ownerSeat, ownerAway: _, ...m } = old;
+  return {
+    ...m,
+    host: m.host ?? ownerSeat ?? 0,
+    hostAway: m.hostAway ?? null,
+    reported: m.reported ?? -1,
+  };
 }
 
 const playing = (m: Meta) => m.started !== null && !m.ended;
@@ -138,8 +149,7 @@ export function publicRoom(m: Meta, online: Set<number>, spectators: number) {
       online: online.has(i),
     })),
     host: m.host,
-    owner: m.ownerSeat,
-    ownerAway: m.ownerAway,
+    hostAway: m.hostAway,
     locked: m.locked,
     started: m.started !== null,
     playing: playing(m),
@@ -151,25 +161,23 @@ export function publicRoom(m: Meta, online: Set<number>, spectators: number) {
 }
 
 export type Hello = { nick: string; seat: string | null; owner: string | null; table: boolean };
-export type Joined =
-  | { ok: true; who: Who; newToken: boolean; owner: boolean }
-  | { ok: false; reason: string };
+export type Joined = { ok: true; who: Who; newToken: boolean } | { ok: false; reason: string };
 
 /**
  * Where a device that says hello goes. `hello.seat` and `hello.owner` are the hashes of the tokens
  * it sent. A known token gets its seat back; the member's owner token, seat 0; a table or a late,
  * locked or full room, a spectator place. `newToken` means the caller gives the seat a new token.
- * A player who sits while nobody holds the owner's seat gets the owner role.
+ * A player who sits while nobody holds the host's seat becomes the host.
  */
 export function join(m: Meta, hello: Hello, spectators: number): Joined {
   const spectate = (): Joined =>
     spectators >= CAPS.spectators
       ? { ok: false, reason: "This room is full." }
-      : { ok: true, who: { seat: null, table: hello.table }, newToken: false, owner: false };
+      : { ok: true, who: { seat: null, table: hello.table }, newToken: false };
   const sit = (seat: number, newToken: boolean): Joined => {
-    if (seat !== m.ownerSeat && !held(m, m.ownerSeat)) m.ownerSeat = seat;
-    if (seat === m.ownerSeat) m.ownerAway = null;
-    return { ok: true, who: { seat, table: false }, newToken, owner: seat === m.ownerSeat };
+    if (seat !== m.host && !held(m, m.host)) m.host = seat;
+    if (seat === m.host) m.hostAway = null;
+    return { ok: true, who: { seat, table: false }, newToken };
   };
   if (hello.table) return spectate();
   if (hello.owner && m.owner && hello.owner === m.owner) {
@@ -196,53 +204,53 @@ function free(m: Meta, seat: number): void {
 }
 
 /**
- * A player taps Leave the room (AC5.5): the seat opens, and when it was the owner's, the role
- * passes to the next online player (it stays put when nobody else is here).
+ * A player taps Leave the room (AC5.5): the seat opens, and when it was the host's, the role
+ * passes at once to the next online player (it stays put when nobody else is here).
  */
 export function leave(m: Meta, seat: number, online: Set<number>): void {
   free(m, seat);
-  if (seat !== m.ownerSeat) return;
+  if (seat !== m.host) return;
   const others = new Set([...online].filter((s) => s !== seat));
-  m.ownerSeat = nextHost(m, others, seat) ?? seat;
-  m.ownerAway = null;
+  m.host = nextHost(m, others, seat) ?? seat;
+  m.hostAway = null;
 }
 
 /**
- * The owner's device dropped (a closed tab, a sleeping phone; not Leave). When another player is
- * still here, the wait starts: the role passes after OWNER_WAIT_MS unless the owner comes back.
- * Returns whether `m` changed.
+ * The host's device is away (a closed tab, a sleeping phone; not Leave) while another player is
+ * here: the wait starts, and the role passes after HOST_WAIT_MS unless the host comes back
+ * (AC6.5). Returns whether `m` changed.
  */
-export function ownerDropped(m: Meta, online: Set<number>, now: number): boolean {
-  if (online.has(m.ownerSeat) || m.ownerAway !== null) return false;
-  if (nextHost(m, online, m.ownerSeat) === null) return false;
-  m.ownerAway = now;
+export function hostDropped(m: Meta, online: Set<number>, now: number): boolean {
+  if (online.has(m.host) || m.hostAway !== null) return false;
+  if (nextHost(m, online, m.host) === null) return false;
+  m.hostAway = now;
   return true;
 }
 
-/** At the room's alarm: the wait is over, so the next online player gets the owner role. */
-export function ownerDue(m: Meta, online: Set<number>, now: number): boolean {
-  if (m.ownerAway === null || now < m.ownerAway + OWNER_WAIT_MS) return false;
-  m.ownerAway = null;
-  if (!online.has(m.ownerSeat)) m.ownerSeat = nextHost(m, online, m.ownerSeat) ?? m.ownerSeat;
+/** At the room's alarm: the wait is over, so the next online player becomes the host. */
+export function hostDue(m: Meta, online: Set<number>, now: number): boolean {
+  if (m.hostAway === null || now < m.hostAway + HOST_WAIT_MS) return false;
+  m.hostAway = null;
+  if (!online.has(m.host)) m.host = nextHost(m, online, m.host) ?? m.host;
   return true;
 }
 
-/** Make me the owner (AC5.5): a player takes the role while the owner's device is away. */
-export function takeOwner(m: Meta, seat: number | null, online: Set<number>): string | null {
-  if (seat === null) return "Only a player can be the owner.";
-  if (seat !== m.ownerSeat && online.has(m.ownerSeat)) return "The owner is here.";
-  m.ownerSeat = seat;
-  m.ownerAway = null;
+/** Make me host (AC6.5): a player takes the role, only while the host's device is away. */
+export function takeHost(m: Meta, seat: number | null, online: Set<number>): string | null {
+  if (seat === null) return "Only a player can be the host.";
+  if (seat !== m.host && online.has(m.host)) return "The host is here.";
+  m.host = seat;
+  m.hostAway = null;
   return null;
 }
 
-export type OwnerOp =
+export type Control =
   | { op: "start" | "rematch" | "lock" | "unlock" | "close" }
   | { op: "kick"; seat: number }
   | { op: "cpu"; seat: number; on: boolean }
   | { op: "size"; seats: number };
 
-/** What the room does after an owner's control. */
+/** What the room does after the host's control. */
 export type Done =
   | { ok: true; start?: boolean; kick?: number; close?: boolean }
   | { ok: false; reason: string };
@@ -250,13 +258,8 @@ export type Done =
 const seatIndex = (m: Meta, seat: unknown) =>
   Number.isInteger(seat) && (seat as number) >= 0 && (seat as number) < m.seats.length;
 
-/** Apply a room owner's control to `m` (AC5.3). Only the owner's socket may call it. */
-export function ownerOp(
-  m: Meta,
-  msg: Record<string, unknown>,
-  now: number,
-  online: Set<number>,
-): Done {
+/** Apply the host's control to `m` (AC5.3). Only the host's socket may call it. */
+export function control(m: Meta, msg: Record<string, unknown>, now: number): Done {
   switch (msg.op) {
     case "start":
     case "rematch": {
@@ -270,8 +273,6 @@ export function ownerOp(
       m.started = now;
       m.ended = false;
       m.match += 1;
-      if (m.host === null || !online.has(m.host))
-        m.host = online.has(m.ownerSeat) ? m.ownerSeat : (nextHost(m, online, null) ?? m.ownerSeat);
       return { ok: true, start: true };
     }
     case "lock":
@@ -283,7 +284,7 @@ export function ownerOp(
     case "kick": {
       if (!seatIndex(m, msg.seat)) return { ok: false, reason: "No such seat." };
       const i = msg.seat as number;
-      if (i === m.ownerSeat) return { ok: false, reason: "That's your seat." };
+      if (i === m.host) return { ok: false, reason: "That's your seat." };
       if (m.seats[i]?.cpu || !held(m, i)) return { ok: false, reason: "Nobody sits there." };
       free(m, i);
       return { ok: true, kick: i };
@@ -292,7 +293,7 @@ export function ownerOp(
       if (playing(m)) return { ok: false, reason: "Change seats between matches." };
       if (!seatIndex(m, msg.seat)) return { ok: false, reason: "No such seat." };
       const i = msg.seat as number;
-      if (i === m.ownerSeat) return { ok: false, reason: "That's your seat." };
+      if (i === m.host) return { ok: false, reason: "That's your seat." };
       if (held(m, i)) return { ok: false, reason: "Someone sits there." };
       (m.seats[i] as Seat).cpu = msg.on === true;
       return { ok: true };
@@ -344,7 +345,7 @@ export function checkMove(
 }
 
 /** The types each sender may send. */
-const FROM_ANY = new Set(["hello", "move", "take-host", "take-owner", "leave", "owner"]);
+const FROM_ANY = new Set(["hello", "move", "take-host", "leave", "control"]);
 const FROM_HOST = new Set(["state", "refused", "end", "crash"]);
 
 export type Envelope =
@@ -431,9 +432,9 @@ export function matchRecord(m: Meta, places: number[][], now: number): MatchReco
 
 /**
  * When the room's one alarm should ring: its end, 10 minutes after it empties, or sooner when the
- * owner's wait is over.
+ * host's wait is over.
  */
 export function alarmAt(m: Meta, sockets: number, now: number): number {
   const end = sockets > 0 ? m.expires : Math.min(m.expires, now + EMPTY_MS);
-  return m.ownerAway === null ? end : Math.min(end, m.ownerAway + OWNER_WAIT_MS);
+  return m.hostAway === null ? end : Math.min(end, m.hostAway + HOST_WAIT_MS);
 }

@@ -1,18 +1,16 @@
 // Online rooms (change 0002), loaded only for online play: start a room (members), join one by
-// link or code (anyone), the lobby with the code, its QR code and the owner's controls, the match
+// link or code (anyone), the lobby with the code, its QR code and the host's controls, the match
 // through the room, and the online scores. The host device runs the engine on a local bus and
 // sends each state to the room; every other device shows only the views the room sends it.
-import { gameById, load, onLeave, players, setScreen, show, showHub, showMatch, shownGames, store } from "./app.js";
-import { createEngine } from "./engine.js";
+import { gameById, home, load, onLeave, players, setScreen, show, showHub, showMatch, shownGames, store } from "./app.js";
+import { createEngine, PROTOCOL } from "./engine.js";
 import { createLocal } from "./net/local.js";
 import { createRoom, forgetTokens, keepToken, tokens } from "./net/room.js";
 import { qrSvg } from "./qr.js";
-import { announce, el, ordinal } from "./ui.js";
+import { announce, el, ordinal, sound } from "./ui.js";
 
 const LEVELS = { easy: "Easy", normal: "Normal", hard: "Hard" };
 const CPU_PAUSE = 600;
-/** As the room's OWNER_WAIT_MS (src/worker/room-logic.ts): when the owner's controls pass on. */
-const OWNER_WAIT_MS = 2 * 60 * 1000;
 /** While "Reconnecting…": how often to check whether the room has ended. */
 const ENDED_CHECK_MS = 30_000;
 /** The room this device is in, if any. */
@@ -152,7 +150,7 @@ export function startRoom(g) {
           ),
         ),
       ),
-      el("div", { class: "row" }, el("button", { class: "primary big", type: "submit" }, "Start the room"), el("button", { type: "button", onclick: showHub }, "Back to games")),
+      el("div", { class: "row" }, el("button", { class: "primary big", type: "submit" }, "Start the room"), el("button", { type: "button", onclick: home }, "Back to games")),
       status,
     ),
   );
@@ -236,7 +234,7 @@ function connect(code, g, game, hello) {
     room,
     table: hello.table === true,
     me: undefined,
-    owner: false,
+    hosting: false,
     info: null,
     screen: "connecting",
     shownMatch: 0,
@@ -279,15 +277,15 @@ function leave(quiet = false) {
   if (!quiet) showHub();
 }
 
-/** Leave the room for good (AC5.5): the seat opens, and the owner's controls pass on. */
+/** Leave the room for good (AC5.5): the seat opens, and the host role passes on. */
 function leaveRoom() {
   if (!s) return;
-  const handsOver = s.owner && s.info?.seats.some((x, i) => i !== s.me && x.online && !x.cpu);
+  const handsOver = s.hosting && s.info?.seats.some((x, i) => i !== s.me && x.online && !x.cpu);
   const ask =
     s.me === null || s.me === undefined
       ? "Stop watching this room?"
       : handsOver
-        ? "Leave this room? Your seat opens, and the owner's controls pass to the next player."
+        ? "Leave this room? Your seat opens, and the next player becomes the host."
         : "Leave this room? Your seat opens for someone else.";
   if (!window.confirm(ask)) return;
   // Offline, the room can't open the seat: keep it, and say so, rather than strand it.
@@ -296,8 +294,8 @@ function leaveRoom() {
   leave();
 }
 
-/** Whether this device's seat has the owner's controls. */
-const owns = (room, me) => me !== null && me !== undefined && room?.owner === me;
+/** Whether this device's seat is the host's: it runs the rules and has the controls. */
+const hosts = (room, me) => me !== null && me !== undefined && room?.host === me;
 
 function onRoom(msg) {
   switch (msg.t) {
@@ -310,14 +308,14 @@ function onRoom(msg) {
     case "welcome":
       s.me = msg.seat;
       s.info = msg.room;
-      s.owner = owns(s.info, s.me);
+      s.hosting = hosts(s.info, s.me);
       if (!s.info.playing) lobby();
       else if (s.screen !== "match") page(`${s.g.name} room`, el("p", { class: "loading", role: "status" }, "The match is on. Getting the table…"));
       return;
     case "seats":
       s.info = msg.room;
-      s.owner = owns(s.info, s.me);
-      if (s.engine && s.info.host !== s.me) stopEngine();
+      s.hosting = hosts(s.info, s.me);
+      if (s.engine && !s.hosting) stopEngine();
       s.engine?.setAway(away());
       if (s.screen === "lobby" || (!s.info.playing && s.screen === "connecting")) lobby();
       drawBar();
@@ -327,7 +325,7 @@ function onRoom(msg) {
     case "host":
       return hostResume(msg);
     case "move":
-      s.bus?.send({ v: 1, t: "move", seat: msg.seat, seq: msg.seq, move: msg.move });
+      s.bus?.send({ v: PROTOCOL, t: "move", seat: msg.seat, seq: msg.seq, move: msg.move });
       return;
     case "view":
     case "public":
@@ -388,8 +386,8 @@ function lobby() {
   const label = before?.closest?.("#main button") ? before.textContent : null;
   s.screen = "lobby";
   const { code, info, g } = s;
-  const owner = s.owner;
-  const op = (msg) => s.room.send({ t: "owner", ...msg });
+  const hosting = s.hosting;
+  const op = (msg) => s.room.send({ t: "control", ...msg });
   const share = async () => {
     const url = linkOf(code);
     if (navigator.share) {
@@ -400,10 +398,10 @@ function lobby() {
     say("Link copied.");
   };
   const seats = info.seats.map((x, i) => {
-    const tags = [i === info.owner ? "owner" : null, i === info.host ? "host" : null, i === s.me ? "you" : null].filter(Boolean);
+    const tags = [i === info.host ? "host" : null, i === s.me ? "you" : null].filter(Boolean);
     const state = x.cpu ? "cpu" : x.taken ? (x.online ? "here" : "away") : "free";
     const controls = [];
-    if (owner && i !== s.me && !info.playing) {
+    if (hosting && i !== s.me && !info.playing) {
       if (!x.taken || x.cpu)
         controls.push(el("button", { type: "button", onclick: () => op({ op: "cpu", seat: i, on: !x.cpu }) }, x.cpu ? "Make it a seat" : "Make it a CPU"));
       if (x.taken && !x.cpu) controls.push(el("button", { type: "button", class: "danger", onclick: () => op({ op: "kick", seat: i }) }, `Kick ${x.nick}`));
@@ -417,21 +415,18 @@ function lobby() {
         el("strong", {}, x.taken || x.cpu ? seatName(x, i) : `Seat ${i + 1}`),
         tags.map((t) => el("span", { class: `tag ${t}` }, t)),
       ),
-      el("span", { class: "state" }, { cpu: "CPU", here: "here", away: "away", free: "free" }[state]),
+      el("span", { class: "state" }, { cpu: "CPU", here: "Joined", away: "Away", free: "Waiting for a player" }[state]),
       controls.length ? el("span", { class: "row seat-tools" }, controls) : null,
     );
   });
-  const ownerSeat = info.seats[info.owner];
-  const ownerName = ownerSeat?.taken ? seatName(ownerSeat, info.owner) : "the owner";
-  // The owner's device is away: its controls pass at the alarm, or to whoever taps (AC5.5).
-  const ownerAway = !owner && ownerSeat && !ownerSeat.online && !ownerSeat.cpu;
-  const at = (ms) => new Date(ms).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-  const notice = ownerAway
+  const hostName = hostSeatName();
+  // The host's device is away: the role passes after a short wait, or to whoever taps (AC6.5).
+  const notice = hostAway()
     ? el(
         "div",
         { class: "notice", role: "status" },
-        el("p", {}, `${ownerName === "the owner" ? "The owner" : ownerName} is away.${info.ownerAway ? ` The owner's controls pass to the next player at ${at(info.ownerAway + OWNER_WAIT_MS)}.` : ""}`),
-        s.me !== null ? el("button", { type: "button", onclick: () => s.room.send({ t: "take-owner" }) }, "Make me the owner") : null,
+        el("p", {}, `Waiting for the host… If ${hostName} isn't back soon, the next player becomes the host.`),
+        s.me !== null ? takeHostButton() : null,
       )
     : null;
   const invite = el(
@@ -445,13 +440,16 @@ function lobby() {
     el("p", { class: "hint-text" }, `Friends scan the code, open the link, or type the code on ${location.host}.`),
   );
   const filled = info.seats.filter((x) => x.taken || x.cpu).length;
+  // Someone sat down: a short chime, as at a real table.
+  if (again && filled > (s.filled ?? filled)) sound("home");
+  s.filled = filled;
   const seatsPane = el(
     "section",
     { class: "pane", "aria-labelledby": "seats-title" },
     el("h2", { id: "seats-title" }, `Seats: ${filled} of ${info.seats.length}`, info.locked ? el("span", { class: "tag locked" }, "locked") : null),
     el("ul", { class: "seats" }, seats),
     info.spectators ? el("p", { class: "hint-text" }, `${info.spectators} watching.`) : null,
-    owner
+    hosting
       ? el(
           "div",
           { class: "row" },
@@ -461,7 +459,7 @@ function lobby() {
         )
       : null,
   );
-  const next = owner
+  const next = hosting
     ? el(
         "div",
         { class: "row lobby-actions" },
@@ -475,12 +473,12 @@ function lobby() {
           ? s.table
             ? "This screen is the table: it shows the board when the match starts."
             : "You're watching: the seats are taken or the room is locked."
-          : `Waiting for ${ownerName} to start.`,
+          : `Waiting for ${hostName} to start.`,
       );
   page(
     `${g.name} room`,
     notice,
-    el("div", { class: "lobby" }, owner ? [invite, seatsPane] : [seatsPane, invite]),
+    el("div", { class: "lobby" }, hosting ? [invite, seatsPane] : [seatsPane, invite]),
     next,
     s.status,
     el("div", { class: "row" }, el("button", { type: "button", onclick: leaveRoom }, "Leave the room")),
@@ -493,16 +491,30 @@ function lobby() {
 
 // ---------- The match ----------
 
-/** The bar over the table: the room, the host, Make me host, the link (AC6.5). */
+/** The host's name, as the lobby and the bar say it. */
+function hostSeatName() {
+  const host = s.info?.seats[s.info.host];
+  return host?.taken ? seatName(host, s.info.host) : "the host";
+}
+
+/** The host's device is away (not this one): the game waits for it (AC6.5). */
+function hostAway() {
+  const host = s.info?.seats[s.info.host];
+  return !s.hosting && !!host?.taken && !host.cpu && !host.online;
+}
+
+const takeHostButton = () => el("button", { type: "button", onclick: () => s.room.send({ t: "take-host" }) }, "Make me host");
+
+/** The bar over the table: the room, the host, Make me host while the host is away (AC6.5). */
 function drawBar() {
   if (!s?.bar) return;
-  const host = s.info?.seats[s.info.host];
-  const canHost = s.me !== null && s.me !== undefined && s.info && s.info.host !== s.me;
+  const waiting = hostAway();
+  const player = s.me !== null && s.me !== undefined;
   // replaceChildren() writes null as the text "null": only real nodes go in.
   s.bar.replaceChildren(
     ...[
-      el("span", {}, `Room ${s.code}. Host: ${host ? seatName(host, s.info.host) : "none"}.`),
-      canHost ? el("button", { type: "button", onclick: () => s.room.send({ t: "take-host" }) }, "Make me host") : null,
+      el("span", {}, `Room ${s.code}. Host: ${hostSeatName()}.${waiting ? " Waiting for the host…" : ""}`),
+      waiting && player ? takeHostButton() : null,
       s.status,
     ].filter(Boolean),
   );
@@ -538,12 +550,12 @@ function sendMove(msg) {
   else if (!s.room.send({ t: "move", seq: msg.seq, move: msg.move })) say("Reconnecting… try again in a moment.");
 }
 
-/** The result screen's buttons (AC7.1): Rematch for the owner, Scores, back to the room, Leave. */
+/** The result screen's buttons (AC7.1): Rematch for the host, Scores, back to the room, Leave. */
 function actions() {
   return [
     // Where the room's answers show (a refused Rematch, "Reconnecting…").
     s?.status ?? null,
-    s?.owner ? el("button", { type: "button", class: "primary big", onclick: () => s.room.send({ t: "owner", op: "rematch" }) }, "Rematch") : el("p", { class: "hint-text" }, "The owner can start a rematch."),
+    s?.hosting ? el("button", { type: "button", class: "primary big", onclick: () => s.room.send({ t: "control", op: "rematch" }) }, "Rematch") : el("p", { class: "hint-text" }, "The host can start a rematch."),
     el("button", { type: "button", onclick: () => showScores(s.g.id, true) }, "Scores"),
     el("button", { type: "button", onclick: () => lobby() }, "Back to the room"),
     el("button", { type: "button", onclick: leaveRoom }, "Leave the room"),

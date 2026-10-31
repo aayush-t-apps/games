@@ -2,6 +2,7 @@
 // `wrangler dev` runs it, empty on each run. Access isn't set up here and the host is local, so
 // the caller is the developer (member and admin), as on `make dev` (ADR 0001).
 import { afterAll, describe, expect, it, vi } from "vitest";
+import { PROTOCOL } from "../../src/worker/room-logic";
 import { localWorker } from "./support/worker";
 
 // workerd beside the other test files on a small machine: 5 s per test is too tight.
@@ -36,7 +37,7 @@ async function device(code: string) {
     ws,
     got,
     closed,
-    send: (msg: Record<string, unknown>) => ws.send(JSON.stringify({ v: 1, ...msg })),
+    send: (msg: Record<string, unknown>) => ws.send(JSON.stringify({ v: PROTOCOL, ...msg })),
     /** The next message of type `t` (and matching `test`), or one already got since `from`. */
     next(t: string, test: (m: Msg) => boolean = () => true, from = 0): Promise<Msg> {
       const ok = (m: Msg) => m.t === t && test(m);
@@ -61,7 +62,9 @@ function opens(code: string, from: string): Promise<boolean> {
   const ws = new WebSocket(`ws://${worker.url.host}/api/rooms/${code}/ws`, {
     headers: { origin: from },
   } as unknown as string[]);
-  ws.addEventListener("open", () => ws.send(JSON.stringify({ v: 1, t: "hello", table: true })));
+  ws.addEventListener("open", () =>
+    ws.send(JSON.stringify({ v: PROTOCOL, t: "hello", table: true })),
+  );
   return new Promise((done) => {
     // Close once the room answered, so neither side writes to a closed socket.
     ws.addEventListener("message", () => {
@@ -103,19 +106,19 @@ describe("rooms: start, join, play, score (AC5.2, AC6.1–AC6.5, AC7.1)", () => 
     const owner = await device(code);
     owner.send({ t: "hello", nick: "Ana", ownerToken });
     const welcome = await owner.next("welcome");
-    expect(welcome).toMatchObject({ seat: 0, owner: true });
+    expect(welcome).toMatchObject({ seat: 0, room: { host: 0 } });
 
     const guest = await device(code);
     guest.send({ t: "hello", nick: "Sam" });
     const joined = await guest.next("welcome");
-    expect(joined).toMatchObject({ seat: 1, owner: false });
+    expect(joined).toMatchObject({ seat: 1, room: { host: 0 } });
     expect(joined.seatToken).toMatch(/^[0-9a-f]{32}$/);
 
-    // Only the owner controls the room.
-    guest.send({ t: "owner", op: "start" });
+    // Only the host controls the room.
+    guest.send({ t: "control", op: "start" });
     expect(await guest.next("error")).toMatchObject({ code: "role" });
 
-    owner.send({ t: "owner", op: "start" });
+    owner.send({ t: "control", op: "start" });
     const start = await owner.next("start");
     expect(start.seats).toEqual([
       { name: "Ana", kind: "human", level: "easy" },
@@ -184,7 +187,7 @@ describe("rooms: start, join, play, score (AC5.2, AC6.1–AC6.5, AC7.1)", () => 
     back.ws.close();
   });
 
-  it("moves the host when the host drops, from the last snapshot (AC6.5)", async () => {
+  it("waits for the host when its device drops; Make me host goes on from the last snapshot (AC6.5)", async () => {
     const { code, ownerToken } = await newRoom();
     const owner = await device(code);
     owner.send({ t: "hello", nick: "Ana", ownerToken });
@@ -192,29 +195,41 @@ describe("rooms: start, join, play, score (AC5.2, AC6.1–AC6.5, AC7.1)", () => 
     const guest = await device(code);
     guest.send({ t: "hello", nick: "Sam" });
     await guest.next("welcome");
-    owner.send({ t: "owner", op: "start" });
+    owner.send({ t: "control", op: "start" });
     await owner.next("start");
     owner.send({
       t: "state",
       seq: 4,
       turn: 1,
-      views: { 0: {}, 1: {} },
+      views: { 0: {}, 1: { mine: 1 } },
       public: {},
       snapshot: { at: 4 },
     });
     await guest.next("view");
 
+    // The host's device drops: the role stays with it for now, and moves wait.
     owner.ws.close();
-    expect(await guest.next("host")).toMatchObject({ snapshot: { at: 4 } });
+    await owner.closed;
+    const away = await guest.next(
+      "seats",
+      (m) => (m.room as { hostAway: number | null }).hostAway !== null,
+    );
+    expect(away.room).toMatchObject({ host: 0 });
+    guest.send({ t: "move", seq: 4, move: { col: 3 } });
+    expect(await guest.next("refused")).toMatchObject({ reason: "Waiting for the host…" });
 
-    // Make me host: the owner, back, takes it over from the same snapshot.
+    // Make me host: the guest goes on from the same snapshot.
+    guest.send({ t: "take-host" });
+    expect(await guest.next("host")).toMatchObject({ snapshot: { at: 4 } });
+    await guest.next("seats", (m) => (m.room as { host: number }).host === 1);
+
+    // The member's device comes back to seat 0, as a player: it gets its view, not the rules.
     const again = await device(code);
     again.send({ t: "hello", nick: "Ana", ownerToken });
-    await again.next("welcome");
+    expect(await again.next("welcome")).toMatchObject({ seat: 0, room: { host: 1 } });
+    expect(await again.next("view")).toBeTruthy();
     again.send({ t: "take-host" });
-    expect(await again.next("host")).toMatchObject({ snapshot: { at: 4 } });
-    const seats = await guest.next("seats", (m) => (m.room as { host: number }).host === 0);
-    expect(seats).toBeTruthy();
+    expect(await again.next("refused")).toMatchObject({ reason: "The host is here." });
     again.ws.close();
     guest.ws.close();
   });
@@ -224,14 +239,14 @@ describe("rooms: start, join, play, score (AC5.2, AC6.1–AC6.5, AC7.1)", () => 
     const owner = await device(code);
     owner.send({ t: "hello", nick: "Ana", ownerToken });
     await owner.next("welcome");
-    owner.send({ t: "owner", op: "lock" });
+    owner.send({ t: "control", op: "lock" });
     await owner.next("seats", (m) => (m.room as { locked: boolean }).locked);
     const late = await device(code);
     late.send({ t: "hello", nick: "Lou" });
     expect(await late.next("welcome")).toMatchObject({ seat: null });
-    owner.send({ t: "owner", op: "unlock" });
-    owner.send({ t: "owner", op: "cpu", seat: 1, on: true });
-    owner.send({ t: "owner", op: "start" });
+    owner.send({ t: "control", op: "unlock" });
+    owner.send({ t: "control", op: "cpu", seat: 1, on: true });
+    owner.send({ t: "control", op: "start" });
     await owner.next("start");
     const table = await device(code);
     table.send({ t: "hello", table: true });
@@ -250,7 +265,7 @@ describe("rooms: start, join, play, score (AC5.2, AC6.1–AC6.5, AC7.1)", () => 
     table.ws.close();
   });
 
-  it("passes the owner role on Leave, and opens the seat; the Hub counts the people (AC5.5, AC8.6)", async () => {
+  it("passes the host role on Leave at once, and opens the seat; the Hub counts the people (AC5.5, AC8.6)", async () => {
     const { code, ownerToken } = await newRoom({ game: "crazy-eights", seats: 3 });
     const owner = await device(code);
     owner.send({ t: "hello", nick: "Ana", ownerToken });
@@ -269,18 +284,19 @@ describe("rooms: start, join, play, score (AC5.2, AC6.1–AC6.5, AC7.1)", () => 
 
     owner.send({ t: "leave" });
     await owner.closed;
-    const seats = await sam.next("seats", (m) => (m.room as { owner: number }).owner === 1);
+    const seats = await sam.next("seats", (m) => (m.room as { host: number }).host === 1);
     expect((seats.room as { seats: { taken: boolean }[] }).seats[0]?.taken).toBe(false);
+    expect(await sam.next("host")).toMatchObject({ snapshot: null });
     expect(await live()).toBe(2);
-    // Sam owns the room now: a control works for Sam, and is refused to Lou.
-    sam.send({ t: "owner", op: "lock" });
+    // Sam is the host now: a control works for Sam, and is refused to Lou.
+    sam.send({ t: "control", op: "lock" });
     await lou.next("seats", (m) => (m.room as { locked: boolean }).locked);
-    lou.send({ t: "owner", op: "unlock" });
+    lou.send({ t: "control", op: "unlock" });
     expect(await lou.next("error")).toMatchObject({ code: "role" });
     sam.ws.close();
   });
 
-  it("starts the wait when the owner's device drops, and lets a player take the role (AC5.5)", async () => {
+  it("refuses Make me host while the host is here; the room shows the wait once it drops (AC6.5)", async () => {
     const { code, ownerToken } = await newRoom();
     const owner = await device(code);
     owner.send({ t: "hello", nick: "Ana", ownerToken });
@@ -288,26 +304,22 @@ describe("rooms: start, join, play, score (AC5.2, AC6.1–AC6.5, AC7.1)", () => 
     const sam = await device(code);
     sam.send({ t: "hello", nick: "Sam" });
     await sam.next("welcome");
+    sam.send({ t: "take-host" });
+    expect(await sam.next("refused")).toMatchObject({ reason: "The host is here." });
     sam.send({ t: "take-owner" });
-    expect(await sam.next("refused")).toMatchObject({ reason: "The owner is here." });
+    expect(await sam.next("error")).toMatchObject({ code: "bad" });
 
     owner.ws.close();
     await owner.closed;
     const info = async () =>
       (await (await worker.fetch(`/api/rooms/${code}`)).json()) as {
-        owner: number;
-        ownerAway: number | null;
+        host: number;
+        hostAway: number | null;
       };
-    await expect.poll(async () => (await info()).ownerAway).toBeGreaterThan(0);
-    sam.send({ t: "take-owner" });
-    await sam.next("seats", (m) => (m.room as { owner: number }).owner === 1);
-    expect(await info()).toMatchObject({ owner: 1, ownerAway: null });
-
-    // The member's device comes back to seat 0, without the role.
-    const back = await device(code);
-    back.send({ t: "hello", nick: "Ana", ownerToken });
-    expect(await back.next("welcome")).toMatchObject({ seat: 0, owner: false });
-    back.ws.close();
+    await expect.poll(async () => (await info()).hostAway).toBeGreaterThan(0);
+    sam.send({ t: "take-host" });
+    await sam.next("seats", (m) => (m.room as { host: number }).host === 1);
+    expect(await info()).toMatchObject({ host: 1, hostAway: null });
     sam.ws.close();
   });
 

@@ -10,10 +10,11 @@ import { createLocal } from "./net/local.js";
 import { createStore, persist } from "./store.js";
 import { announce, el, fillNames, ordinal, passScreen, setSound, sound } from "./ui.js";
 
-const TYPES = { cards: "Cards", board: "Board game", kids: "Kids" };
+const TYPES = { cards: "Cards", board: "Board game", kids: "Kids", puzzles: "Puzzle" };
 const LEVEL_NAMES = { easy: "Easy", normal: "Normal", hard: "Hard" };
 const CPU_PAUSE = 600;
 const CONFETTI = ["red", "blue", "yellow", "green"];
+const LEAVE = "Leave this match? It won't be kept.";
 
 const main = document.getElementById("main");
 export const store = createStore();
@@ -25,13 +26,15 @@ let install = null;
 let layout = () => "compact";
 let screen = "boot";
 /** Online play: set up here (Access, or the local developer), and this device's member. */
-const net = { ready: false, member: false, admin: false };
+const net = { ready: false, member: false, admin: false, email: "" };
 /** What online.js does when the player leaves its screens for the hub. */
 let onlineExit = null;
+/** Each game's last Setup on this page, so Back to Setup shows it as it was. */
+const setups = {};
 
 export const filesOf = (id) => [`/games/${id}/rules.js`, `/games/${id}/view.js`];
 export const players = ([min, max]) =>
-  min === max ? `${min} players` : `${min}–${max} ${max === 1 ? "player" : "players"}`;
+  min === max ? `${min} ${min === 1 ? "player" : "players"}` : `${min}–${max} players`;
 export const gameById = (id) => allGames.find((g) => g.id === id);
 /** The games the hub shows now (on, in the catalogue's order). */
 export const shownGames = () => games;
@@ -45,6 +48,25 @@ export function onLeave(fn) {
 
 export function setScreen(name) {
   screen = name;
+}
+
+// ---------- Back ----------
+// Each screen over the hub is a history entry (`d`: how many entries above the hub), so the
+// browser's or the phone's Back goes one screen back and leaves the app only from the hub.
+
+/** The history entry for a screen: a new one, or this one again (Play again keeps it). */
+function mark(s, game) {
+  const now = history.state;
+  if (now?.s === s && now?.game === game) return;
+  if (now?.s === "match" && s === "match") history.replaceState({ s, game, d: now.d }, "", "/");
+  else history.pushState({ s, game, d: (now?.d ?? 0) + 1 }, "", "/");
+}
+
+/** Back to the hub: through history when the screens above it are entries, so Back stays right. */
+export function home() {
+  const d = history.state?.d ?? 0;
+  if (d > 0 && !ROOM_PATH.test(location.pathname)) history.go(-d);
+  else showHub();
 }
 
 function supported() {
@@ -77,6 +99,7 @@ export function showHub() {
   if (ROOM_PATH.test(location.pathname)) history.replaceState(null, "", "/");
   screen = "hub";
   document.title = "Games";
+  drawMe();
   // No questions first: pick a game and play. A name is asked only where others see it.
   show(
     el("h1", { class: "hub-title" }, "Pick a game"),
@@ -88,7 +111,6 @@ export function showHub() {
 }
 
 function gameBox(g) {
-  const playable = net.member && g.players[1] >= 2;
   return el(
     "li",
     { class: `box type-${g.type}`, dataset: { game: g.id } },
@@ -106,21 +128,17 @@ function gameBox(g) {
       { class: "box-actions" },
       el(
         "button",
-        { class: "primary", type: "button", "aria-label": `Play ${g.name}`, onclick: () => showSetup(g) },
+        {
+          class: "primary",
+          type: "button",
+          "aria-label": `Play ${g.name}`,
+          onclick: () => {
+            sound("card");
+            showSetup(g);
+          },
+        },
         "Play",
       ),
-      playable
-        ? el(
-            "button",
-            {
-              type: "button",
-              class: "online-play",
-              "aria-label": `Invite friends: ${g.name}`,
-              onclick: () => online().then((o) => o.startRoom(g)),
-            },
-            "Invite friends",
-          )
-        : null,
     ),
   );
 }
@@ -128,8 +146,8 @@ function gameBox(g) {
 export const CODE = /^[A-HJKMNP-Z2-9]{6}$/;
 
 /**
- * Play with friends (AC5.1): a friend's room code goes straight in here; a member invites from a
- * game's own button. Hidden until online play is set up, and offline.
+ * Join a friend's room (AC5.1): their code goes straight in here. A member invites from a game's
+ * Setup; sign-in is in Settings. Hidden until online play is set up, and offline.
  */
 function onlineSection() {
   if (!net.ready || !navigator.onLine) return null;
@@ -160,14 +178,8 @@ function onlineSection() {
     el(
       "div",
       { class: "online-text" },
-      el("h2", { id: "online-title" }, "Play with friends"),
-      el(
-        "p",
-        {},
-        net.member
-          ? "Tap Invite friends on a game and share the link. Got a code? Type it here."
-          : "Got a code from a friend? Type it here. No sign-in needed.",
-      ),
+      el("h2", { id: "online-title" }, "Join friends"),
+      el("p", {}, "Got a room code? Type it here. No sign-in needed."),
     ),
     el(
       "form",
@@ -177,6 +189,35 @@ function onlineSection() {
       el("button", { type: "submit", class: "primary" }, "Join"),
       status,
     ),
+  );
+}
+
+/** Who plays on this device, on the top bar's Settings button: the name, and Member or Guest. */
+function drawMe() {
+  const button = document.getElementById("open-settings");
+  if (!button) return;
+  const nick = store.get().player.nick;
+  const role = net.ready ? (net.member ? "Member" : "Guest") : null;
+  button.setAttribute("aria-label", `Settings: ${nick}${role ? `, ${role.toLowerCase()}` : ""}`);
+  // replaceChildren() writes null as the text "null": only real nodes go in.
+  button.replaceChildren(
+    ...[
+      el("span", { class: "me-name" }, nick),
+      role ? el("span", { class: `me-tag${net.member ? " member" : ""}` }, role) : null,
+      el("span", { class: "me-gear", "aria-hidden": "true" }, "⚙"),
+    ].filter(Boolean),
+  );
+}
+
+/** Settings' first part: who you are, and Sign in or Sign out (AC5.1). */
+function accountSection() {
+  if (!net.ready) return null;
+  return el(
+    "div",
+    { class: "account" },
+    net.member
+      ? el("p", {}, "Signed in", net.email ? ` as ${net.email}` : "", ". You can start rooms from a game's Setup.")
+      : el("p", {}, "Playing as a guest: every game, and rooms by code. Members also start rooms."),
     el(
       "p",
       { class: "online-links" },
@@ -280,21 +321,45 @@ function installSection() {
 
 // ---------- Setup ----------
 
-function showSetup(g, previous) {
+/**
+ * Setup: who plays and how. Each seat but yours is a CPU or a person here (pass-and-play on this
+ * device); friends on other devices play through a room (Play with friends). A puzzle has its pick
+ * instead (a difficulty, a topic), and no seats.
+ */
+function showSetup(g, previous, fromHistory = false) {
   stopMatch();
   screen = "setup";
+  if (!fromHistory) mark("setup", g.id);
   document.title = `${g.name}: Games`;
   const data = store.get();
   const [min, max] = g.players;
-  const cfg = previous ?? {
-    seats: [{ kind: "human", name: data.player.nick }, ...(max > 1 ? [{ kind: "cpu", name: "" }] : [])],
-    level: "normal",
-    kid: data.settings.kid,
-  };
+  const cfg = previous ??
+    setups[g.id] ?? {
+      seats: [{ kind: "human", name: data.player.nick }, ...(max > 1 ? [{ kind: "cpu", name: "" }] : [])],
+      level: "normal",
+      pick: g.pick?.options[0][0],
+      kid: g.pick ? false : data.settings.kid,
+    };
+  setups[g.id] = cfg;
   const draw = () => {
     let cpu = 0;
     const rows = cfg.seats.map((seat, i) => {
       const label = seat.kind === "cpu" ? `CPU ${++cpu}` : null;
+      const kind = (to, text) =>
+        el(
+          "button",
+          {
+            type: "button",
+            "aria-pressed": String(seat.kind === to),
+            onclick: () => {
+              if (seat.kind === to) return;
+              seat.kind = to;
+              seat.name = to === "human" ? `Player ${i + 1}` : "";
+              draw();
+            },
+          },
+          text,
+        );
       return el(
         "li",
         { class: "seat" },
@@ -316,18 +381,7 @@ function showSetup(g, previous) {
           : el("span", { class: "seat-name cpu" }, label),
         i === 0
           ? null
-          : el(
-              "button",
-              {
-                type: "button",
-                onclick: () => {
-                  seat.kind = seat.kind === "cpu" ? "human" : "cpu";
-                  seat.name = seat.kind === "human" ? `Player ${i + 1}` : "";
-                  draw();
-                },
-              },
-              seat.kind === "cpu" ? "Make it a person" : "Make it a CPU",
-            ),
+          : el("span", { class: "kind", role: "group", "aria-label": `Seat ${i + 1}` }, kind("cpu", "CPU"), kind("human", "Person here")),
         i > 0 && cfg.seats.length > min
           ? el(
               "button",
@@ -345,6 +399,15 @@ function showSetup(g, previous) {
       );
     });
     const levels = cfg.kid ? ["easy"] : ["easy", "normal", "hard"];
+    const radios = (name, list, now, set) =>
+      list.map(([value, text]) =>
+        el(
+          "label",
+          { class: "choice" },
+          el("input", { type: "radio", name, value, checked: now === value, onchange: () => set(value) }),
+          text,
+        ),
+      );
     show(
       el(
         "form",
@@ -366,71 +429,107 @@ function showSetup(g, previous) {
               el("ol", {}, g.how.map((line) => el("li", {}, line))),
             )
           : null,
-        el(
-          "fieldset",
-          {},
-          el("legend", {}, "Players"),
-          el("ul", { class: "seats" }, rows),
-          cfg.seats.length < max
-            ? el(
-                "button",
-                {
-                  type: "button",
-                  onclick: () => {
-                    cfg.seats.push({ kind: "cpu", name: "" });
-                    draw();
-                  },
+        // A puzzle's pick: its difficulty or its topic (index.json `pick`).
+        g.pick
+          ? el(
+              "fieldset",
+              { class: "levels pick" },
+              el("legend", {}, g.pick.label),
+              radios("pick", g.pick.options, cfg.pick, (value) => {
+                cfg.pick = value;
+              }),
+            )
+          : null,
+        max > 1
+          ? el(
+              "fieldset",
+              {},
+              el("legend", {}, "Players"),
+              el("ul", { class: "seats" }, rows),
+              el("p", { class: "hint-text" }, "Person here: you pass this device on each turn."),
+              cfg.seats.length < max
+                ? el(
+                    "button",
+                    {
+                      type: "button",
+                      onclick: () => {
+                        cfg.seats.push({ kind: "cpu", name: "" });
+                        draw();
+                      },
+                    },
+                    "Add a player",
+                  )
+                : null,
+            )
+          : null,
+        cfg.seats.some((s) => s.kind === "cpu")
+          ? el(
+              "fieldset",
+              { class: "levels" },
+              el("legend", {}, "CPU level"),
+              radios(
+                "level",
+                levels.map((lv) => [lv, LEVEL_NAMES[lv]]),
+                cfg.kid ? "easy" : cfg.level,
+                (value) => {
+                  cfg.level = value;
                 },
-                "Add a player",
-              )
-            : null,
-        ),
-        el(
-          "fieldset",
-          { class: "levels" },
-          el("legend", {}, "CPU level"),
-          levels.map((lv) =>
-            el(
+              ),
+              cfg.kid ? el("p", { class: "hint-text" }, "Kid mode plays on easy.") : null,
+            )
+          : null,
+        g.pick
+          ? null
+          : el(
               "label",
-              { class: "choice" },
+              { class: "choice kid" },
               el("input", {
-                type: "radio",
-                name: "level",
-                value: lv,
-                checked: (cfg.kid ? "easy" : cfg.level) === lv,
-                onchange: () => {
-                  cfg.level = lv;
+                type: "checkbox",
+                checked: cfg.kid,
+                onchange: (e) => {
+                  cfg.kid = e.target.checked;
+                  draw();
                 },
               }),
-              LEVEL_NAMES[lv],
+              "Kid mode: shows the moves you can make, with Hint and Undo",
             ),
-          ),
-          cfg.kid ? el("p", { class: "hint-text" }, "Kid mode plays on easy.") : null,
-        ),
-        el(
-          "label",
-          { class: "choice kid" },
-          el("input", {
-            type: "checkbox",
-            checked: cfg.kid,
-            onchange: (e) => {
-              cfg.kid = e.target.checked;
-              draw();
-            },
-          }),
-          "Kid mode: shows the moves you can make, with Hint and Undo",
-        ),
         el(
           "div",
           { class: "row" },
           el("button", { class: "primary big", type: "submit" }, "Start"),
-          el("button", { type: "button", onclick: showHub }, "Back to games"),
+          el("button", { type: "button", onclick: home }, "Back to games"),
         ),
+        max > 1 ? friendsSection(g) : null,
       ),
     );
   };
   draw();
   main.querySelector("h1")?.focus();
+}
+
+/**
+ * Setup's Play with friends: friends on their own devices play through a room. A member starts
+ * one here; a guest joins one by its code on the hub. Offline, it says play stays on this device.
+ */
+function friendsSection(g) {
+  const pane = (...children) =>
+    el("section", { class: "friends", "aria-labelledby": "friends-title" }, el("h2", { id: "friends-title" }, "Play with friends"), ...children);
+  if (!navigator.onLine)
+    return pane(el("p", {}, "Offline: play against the CPU, or pass this device. Friends on their own phones need signal."));
+  if (!net.ready) return el("section", { class: "friends", hidden: true });
+  if (net.member)
+    return pane(
+      el("p", {}, "Friends on their own phones join with a link or a code. No sign-in for them."),
+      el(
+        "button",
+        { type: "button", class: "online-play", onclick: () => online().then((o) => o.startRoom(g)) },
+        "Invite friends",
+      ),
+    );
+  return pane(
+    el("p", {}, "Got a code from a friend? Type it on the games list. To start a room yourself, sign in."),
+    el("p", { class: "online-links" }, el("a", { href: "/member" }, "Sign in to invite friends")),
+  );
 }
 
 // ---------- Match ----------
@@ -447,9 +546,13 @@ export async function load(id) {
   return { rules: rules.default, view: view.default };
 }
 
+/** A seed from today's date on this device (20261031): the same daily puzzle for everyone. */
+const today = (d = new Date()) => d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+
 async function startMatch(g, cfg) {
   stopMatch();
   screen = "match";
+  mark("match", g.id);
   show(el("p", { class: "loading", role: "status" }, `Getting ${g.name}…`));
   let code;
   try {
@@ -459,10 +562,12 @@ async function startMatch(g, cfg) {
     show(
       el("h1", {}, g.name),
       el("p", { class: "loading" }, `${g.name} needs signal once. Connect to the internet, then try again.`),
-      el("button", { type: "button", onclick: showHub }, "Back to games"),
+      el("button", { type: "button", onclick: home }, "Back to games"),
     );
     return;
   }
+  // Back (or another screen) while the game loaded: the match doesn't open over it.
+  if (screen !== "match") return;
   // The name typed for "You" is this device's name from now on (no separate question for it).
   const mine = (cfg.seats[0].name || "").trim();
   if (mine && mine !== store.get().player.nick) store.setNick(mine);
@@ -478,8 +583,9 @@ async function startMatch(g, cfg) {
   }));
   const humans = seats.flatMap((s, i) => (s.kind === "human" ? [i] : []));
   const transport = createLocal(seats);
-  const seed = crypto.getRandomValues(new Uint32Array(1))[0];
-  const engine = createEngine({ game: code.rules, seats, seed, transport, delay: CPU_PAUSE });
+  const pick = g.pick ? cfg.pick : undefined;
+  const seed = g.pick?.daily === pick && pick ? today() : crypto.getRandomValues(new Uint32Array(1))[0];
+  const engine = createEngine({ game: code.rules, seats, seed, pick, transport, delay: CPU_PAUSE });
   const m = {
     g,
     cfg,
@@ -487,7 +593,7 @@ async function startMatch(g, cfg) {
     seats,
     humans,
     names: seats.map((s) => s.name),
-    level: seats.some((s) => s.kind === "cpu") ? level : "friends",
+    level: pick ?? (seats.some((s) => s.kind === "cpu") ? level : "friends"),
     engine,
     transport,
     views: [],
@@ -561,7 +667,8 @@ function drawMatchFrame(m) {
         el("button", { type: "button", class: "ghost", onclick: () => quit(m) }, "Quit"),
         el("h1", { id: "match-title" }, m.g.name),
         el("p", { class: "turn", id: "turn" }),
-        kid
+        // Kid mode and every puzzle (a hint is one right step; Undo takes back a move).
+        kid || m.rules.puzzle
           ? el(
               "div",
               { class: "kid-tools" },
@@ -586,7 +693,10 @@ function drawMatchFrame(m) {
 
 function quit(m) {
   if (m.online) m.online.leave();
-  else if (m.ended || window.confirm("Leave this match? It won't be kept.")) showHub();
+  else if (m.ended || window.confirm(LEAVE)) {
+    stopMatch();
+    home();
+  }
 }
 
 function askHint(m) {
@@ -638,7 +748,7 @@ function onEngine(m, msg) {
         m.online
           ? m.online.actions()
           : el("button", { type: "button", class: "primary", onclick: () => startMatch(m.g, m.cfg) }, "Start again"),
-        el("button", { type: "button", onclick: showHub }, "Back to games"),
+        el("button", { type: "button", onclick: home }, "Back to games"),
       ),
     );
   }
@@ -774,8 +884,9 @@ function finish(m, places) {
   if (!m.online)
     store.record({ game: m.g.id, level: m.level, won, place: places.slice(0, place - 1).flat().length + 1, at: new Date().toISOString() });
   const firsts = places[0].map((i) => m.names[i]);
-  const headline =
-    places.length === 1 && !solo
+  const headline = m.rules.puzzle
+    ? "Solved!"
+    : places.length === 1 && !solo
       ? "It's a draw"
       : m.humans.length === 1
         ? won
@@ -811,7 +922,7 @@ function finish(m, places) {
             ? m.online.actions()
             : [
                 el("button", { type: "button", class: "primary big", onclick: () => startMatch(m.g, m.cfg) }, "Play again"),
-                el("button", { type: "button", onclick: showHub }, "Choose another game"),
+                el("button", { type: "button", onclick: home }, "Choose another game"),
               ],
         ),
       ),
@@ -831,6 +942,7 @@ function openSettings() {
       "form",
       { method: "dialog" },
       el("h2", { id: "settings-title" }, "Settings"),
+      accountSection(),
       el("label", { for: "nick" }, "Your name"),
       el("input", {
         id: "nick",
@@ -887,6 +999,7 @@ function openSettings() {
   );
   dialog.addEventListener("close", () => {
     dialog.remove();
+    drawMe();
     if (screen === "hub") showHub();
   });
   document.body.append(dialog);
@@ -907,8 +1020,8 @@ async function startApp() {
   const offline = document.getElementById("offline");
   const signal = () => {
     offline.hidden = navigator.onLine;
-    // The friends panel hides offline and comes back online.
-    if (screen === "hub") document.getElementById("online-slot")?.replaceChildren(...[onlineSection()].filter(Boolean));
+    // The friends parts hide offline (Setup says play stays on this device) and come back online.
+    redrawOnline();
   };
   window.addEventListener("online", () => {
     signal();
@@ -921,7 +1034,7 @@ async function startApp() {
   document.getElementById("home").addEventListener("click", (event) => {
     event.preventDefault();
     if (match && !match.ended) quit(match);
-    else showHub();
+    else home();
   });
   document.addEventListener("keydown", (event) => {
     if (!match?.cfg.kid || event.target.closest?.("input, select, textarea")) return;
@@ -951,11 +1064,30 @@ async function startApp() {
   checkOnline();
 }
 
-/** The page for this address: a room's link (/r/<code>), or the hub. */
+/** The page for this address and history entry: a room's link (/r/<code>), a Setup, or the hub. */
 function route() {
   const room = location.pathname.match(ROOM_PATH);
-  if (room) online().then((o) => o.openRoom(room[1].toUpperCase()));
+  if (room) return online().then((o) => o.openRoom(room[1].toUpperCase()));
+  const at = history.state;
+  // Back from a match in play asks first; No keeps the match, and its entry comes back.
+  if (match && !match.ended && !match.online && at?.s !== "match") {
+    if (!window.confirm(LEAVE)) return history.pushState({ s: "match", game: match.g.id, d: (at?.d ?? 0) + 1 }, "", "/");
+    stopMatch();
+  }
+  const g = at?.game ? gameById(at.game) : null;
+  // A match's entry with no match (a reload, Forward): its Setup, at the same depth for home().
+  if (g && at.s === "match") history.replaceState({ s: "setup", game: g.id, d: at.d }, "", "/");
+  if (g) showSetup(g, undefined, true);
   else if (screen !== "hub") showHub();
+}
+
+/** Online or offline, signed in or not: the parts that depend on it, redrawn in place. */
+function redrawOnline() {
+  drawMe();
+  if (screen === "hub") document.getElementById("online-slot")?.replaceChildren(...[onlineSection()].filter(Boolean));
+  const friends = main.querySelector(".setup .friends");
+  const g = screen === "setup" ? gameById(history.state?.game) : null;
+  if (friends && g) friends.replaceWith(friendsSection(g));
 }
 
 /**
@@ -980,14 +1112,16 @@ async function checkOnline() {
       const res = await fetch("/api/member/me", { redirect: "manual" });
       const me = res.ok ? await res.json() : null;
       net.member = Boolean(me?.email);
+      net.email = typeof me?.email === "string" ? me.email : "";
       net.admin = me?.admin === true;
     } catch {
       net.member = false;
     }
   }
-  // Only the online row and the shelf change, in place: a name being typed stays.
-  if (screen === "hub" && JSON.stringify([games.map((g) => g.id), net]) !== before) {
-    document.getElementById("online-slot")?.replaceChildren(...[onlineSection()].filter(Boolean));
+  // Only the online parts and the shelf change, in place: a name being typed stays.
+  if (JSON.stringify([games.map((g) => g.id), net]) === before) return;
+  redrawOnline();
+  if (screen === "hub") {
     main.querySelector(".shelf")?.replaceChildren(...games.map(gameBox));
     markCached();
   }

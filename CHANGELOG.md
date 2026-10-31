@@ -5,6 +5,33 @@ Versions: [Semantic Versioning](https://semver.org/). Change docs: `docs/changes
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-31
+
+### Added
+
+- Sudoku with four levels, Easy to Expert, each with one solution and graded by what it takes to
+  solve; notes, repeats in red, a mistakes count, Hint and Undo
+  (docs/changes/0006-puzzles-and-simpler-flows.md).
+- Crossword: **Today's puzzle** (the same for everyone that day) or a topic (Animals, Food, World,
+  Science, Sports, Music, films and books, Words, A mix), with an on-screen keyboard and Hint.
+- Back works like an app: one screen back, a question before it leaves a match, and out of the app
+  only from the hub.
+- The Settings button shows who plays here: the name and **Member** or **Guest**.
+
+### Changed
+
+- Setup: each seat is **CPU** or **Person here** (pass-and-play on this device), the CPU level
+  shows only when a CPU plays, and **Play with friends** (Invite friends, sign in, or the offline
+  note) is at the bottom. The hub keeps only **Join friends** with a code; sign-in and sign-out are
+  in Settings. The room's seats say **Joined**, **Away**, **CPU** or **Waiting for a player**, with
+  a chime when someone sits down. Game boxes tilt a little under a tap.
+- A room has one role, the **Host**, instead of an owner and a host: the member who starts it.
+  Their device runs the match and has the controls. **Leave the room** passes the role at once;
+  when the host's device drops, the game shows "Waiting for the host…" and the role passes after
+  30 seconds. **Make me host** shows only while the host is away. The owner tag, **Make me the
+  owner** and the 2-minute owner wait are gone. The room's messages are version 2, so a tab open
+  on an older release asks to reload once; a live room keeps its current host.
+
 ## [0.4.0] - 2026-10-30
 
 ### Added

@@ -3,6 +3,7 @@
 // after a drop or a deploy (1, 2, 4, 8, then every 15 s), and keeps this tab's seat and owner
 // tokens in sessionStorage. It also tells its listeners {t: "link", up} when the link goes up or
 // down. Keep-alive pings get "pong" from Cloudflare without waking the room.
+import { PROTOCOL } from "../engine.js";
 
 export const BACKOFF = [1000, 2000, 4000, 8000, 15000];
 export const PING_MS = 30_000;
@@ -73,7 +74,7 @@ export function createRoom({
   const link = (now) => {
     if (up === now) return;
     up = now;
-    emit({ v: 1, t: "link", up });
+    emit({ v: PROTOCOL, t: "link", up });
   };
 
   function keepAlive() {
@@ -90,7 +91,7 @@ export function createRoom({
     socket.onopen = () => {
       tries = 0;
       const saved = tokens(code, storage);
-      socket.send(JSON.stringify({ v: 1, t: "hello", ...hello, seatToken: saved.seatToken, ownerToken: saved.ownerToken }));
+      socket.send(JSON.stringify({ v: PROTOCOL, t: "hello", ...hello, seatToken: saved.seatToken, ownerToken: saved.ownerToken }));
       keepAlive();
     };
     socket.onmessage = (event) => {
@@ -132,7 +133,7 @@ export function createRoom({
     /** Send a message to the room; false when the link is down (it says so to the player). */
     send(msg) {
       if (ws?.readyState !== 1) return false;
-      ws.send(JSON.stringify({ v: 1, ...msg }));
+      ws.send(JSON.stringify({ v: PROTOCOL, ...msg }));
       return true;
     },
     onMessage(cb) {

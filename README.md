@@ -2,7 +2,7 @@
 
 Six classic games for any device: Crazy Eights, Go Fish, Memory, Ludo, Four in a Row and Quiz
 Race. Play against the CPU (easy, normal or hard), or pass-and-play with family on one phone or
-tablet. It works offline, installs like an app, and has a kid mode with hints and undo. Your own
+tablet. Two puzzles to play alone: Sudoku (Easy to Expert) and Crossword (today's, or a topic). It works offline, installs like an app, and has a kid mode with hints and undo. Your own
 scores stay in your browser. Play with friends on their own devices in an online room: members
 start rooms, and anyone joins with the link, the code or the QR code, with no sign-in.
 
@@ -10,22 +10,22 @@ Open **https://games.app.a69x.in**.
 
 ## Play online
 
-1. A member (signed in with **Sign in to invite friends** on the games page) taps **Invite
-   friends** on a game, types their name, picks the seats (CPU seats too) and taps **Start the
-   room**.
+1. A member (signed in with **Sign in to invite friends** in Settings; the top bar then says
+   **Member**) taps **Play** on a game, then **Invite friends** under **Play with friends**, types
+   their name, picks the seats (CPU seats too) and taps **Start the room**.
 2. Share the room: show its QR code, read out its 6-letter code, or tap **Share** (or **Copy
-   link**). Friends open the link, or type the code under **Play with friends** on the games page
+   link**). Friends open the link, or type the code under **Join friends** on the games page
    and tap **Join**, then type a nickname.
    A TV or a big screen can tap **Join as Table** to show the board to everyone.
-3. The room's owner taps **Start**. The owner's device runs the match. If it drops, the next
-   device takes over; any player can tap **Make me host** (a laptop on Wi-Fi is steadier than a
-   phone). A device that drops reconnects by itself, and a player away for 60 s on their turn is
-   played by the CPU until they're back.
-4. At the end, everyone sees the places, the owner can tap **Rematch**, and **Scores** shows each
+3. The room's **host** (the member who started it) taps **Start**. The host's device runs the
+   match and has the controls. If it drops or sleeps, the game shows "Waiting for the host…"; if
+   it isn't back within 30 seconds, the next player becomes the host and the game goes on. While
+   the host is away, any player can tap **Make me host**. A device that drops reconnects by
+   itself, and a player away for 60 s on their turn is played by the CPU until they're back.
+4. At the end, everyone sees the places, the host can tap **Rematch**, and **Scores** shows each
    game's top players and last 20 online matches.
-5. **Leave the room** opens your seat for someone else. When the owner leaves, the next player
-   gets the owner's controls. When the owner's phone only drops or sleeps, the controls wait 2
-   minutes for it, then pass on; meanwhile any player can tap **Make me the owner**.
+5. **Leave the room** opens your seat for someone else. When the host leaves, the next player
+   becomes the host at once.
 
 Rooms end by themselves 6 hours after they start, or 10 minutes after everyone leaves. Up to 8
 players and 8 watchers a room.
@@ -44,7 +44,8 @@ why are in `docs/adr/0001-members-sign-in-with-access.md`, Setup. To do it again
    tag** into `wrangler.jsonc` (`ACCESS_TEAM`, `ACCESS_AUD`). They aren't secret.
 4. GitHub: **games → Settings → Secrets and variables → Actions → New repository secret**:
    `ADMIN_EMAIL`, the email you sign in with. The next deploy takes it.
-5. Check: open `/member` and sign in: the hub shows **Invite friends** on each game, and `/admin`
+5. Check: open `/member` and sign in: the top bar says **Member**, a game's Setup has **Invite
+   friends**, and `/admin`
    opens. In a private window, `/` shows no sign-in.
 
 **Add or remove a member:** edit the policy's emails in Cloudflare (about a minute). The **Members**

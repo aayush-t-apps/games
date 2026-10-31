@@ -1,13 +1,17 @@
-// The room's rules (change 0002: AC5.3, AC6.1, AC6.3, AC6.5, AC7.1): seats, owner controls, moves,
-// the host, envelopes, rate and caps, and the match record.
+// The room's rules (change 0002: AC5.3, AC6.1, AC6.3, AC6.5, AC7.1): seats, the host's controls,
+// moves, the host role, envelopes, rate and caps, and the match record.
 import { describe, expect, it } from "vitest";
 import {
   alarmAt,
   allow,
   CAPS,
   checkMove,
+  control,
   EMPTY_MS,
   envelope,
+  HOST_WAIT_MS,
+  hostDropped,
+  hostDue,
   join,
   LIFETIME_MS,
   leave,
@@ -15,14 +19,11 @@ import {
   matchRecord,
   newMeta,
   nextHost,
-  OWNER_WAIT_MS,
-  ownerDropped,
-  ownerDue,
-  ownerOp,
+  PROTOCOL,
   people,
   publicRoom,
   type Snap,
-  takeOwner,
+  takeHost,
   upgrade,
   validPlaces,
 } from "../../src/worker/room-logic";
@@ -53,7 +54,7 @@ const hello = (
 const all = (...seats: number[]) => new Set(seats);
 
 describe("a new room", () => {
-  it("has its seats, the last ones CPU, the owner's seat 0 as host, and its end in 6 hours", () => {
+  it("has its seats, the last ones CPU, the member's seat 0 as host, and its end in 6 hours", () => {
     const m = room(4, 2);
     expect(m.seats.map((s) => s.cpu)).toEqual([false, false, true, true]);
     expect(m.host).toBe(0);
@@ -71,13 +72,13 @@ describe("a new room", () => {
 });
 
 describe("joining (AC6.1)", () => {
-  it("gives the owner seat 0, then each guest the next free seat", () => {
+  it("gives the member seat 0, then each guest the next free seat", () => {
     const m = room(3);
     expect(join(m, hello("Ana", { owner: "owner-hash" }), 0)).toMatchObject({
       ok: true,
       who: { seat: 0 },
-      owner: true,
     });
+    expect(m.host).toBe(0);
     expect(join(m, hello("Sam"), 0)).toMatchObject({ ok: true, who: { seat: 1 }, newToken: true });
     (m.seats[1] as Meta["seats"][number]).token = "sam";
     expect(join(m, hello("Lou"), 0)).toMatchObject({ who: { seat: 2 } });
@@ -118,14 +119,14 @@ describe("joining (AC6.1)", () => {
     });
   });
 
-  it("never gives a guest the owner's seat or a CPU seat", () => {
+  it("never gives a guest the member's seat or a CPU seat", () => {
     const m = room(2, 1);
     expect(join(m, hello("Sam"), 0)).toMatchObject({ who: { seat: null } });
     expect(join(m, hello("Sam", { owner: "wrong" }), 0)).toMatchObject({ who: { seat: null } });
   });
 });
 
-describe("owner controls (AC5.3)", () => {
+describe("the host's controls (AC5.3)", () => {
   const full = () => {
     const m = room(3);
     m.seats.forEach((s, i) => {
@@ -138,108 +139,101 @@ describe("owner controls (AC5.3)", () => {
   it("starts only when every seat has a player or a CPU, and not twice", () => {
     const m = room(3);
     (m.seats[0] as Meta["seats"][number]).token = "t0";
-    expect(ownerOp(m, { op: "start" }, NOW, all(0))).toEqual({
+    expect(control(m, { op: "start" }, NOW)).toEqual({
       ok: false,
       reason: "Seat 2 is empty: wait for a player, or make it a CPU.",
     });
     const f = full();
-    expect(ownerOp(f, { op: "start" }, NOW, all(0, 1, 2))).toEqual({ ok: true, start: true });
+    expect(control(f, { op: "start" }, NOW)).toEqual({ ok: true, start: true });
     expect(f).toMatchObject({ started: NOW, ended: false, match: 1, host: 0 });
-    expect(ownerOp(f, { op: "start" }, NOW, all(0))).toEqual({
+    expect(control(f, { op: "start" }, NOW)).toEqual({
       ok: false,
       reason: "A match is on.",
     });
     f.ended = true;
-    expect(ownerOp(f, { op: "rematch" }, NOW + 1, all(0))).toMatchObject({ ok: true, start: true });
+    expect(control(f, { op: "rematch" }, NOW + 1)).toMatchObject({ ok: true, start: true });
     expect(f.match).toBe(2);
-  });
-
-  it("starts on another device when the host's is away", () => {
-    const m = full();
-    m.host = 2;
-    ownerOp(m, { op: "start" }, NOW, all(1));
-    expect(m.host).toBe(1);
   });
 
   it("locks, unlocks and closes", () => {
     const m = room();
-    expect(ownerOp(m, { op: "lock" }, NOW, all())).toEqual({ ok: true });
+    expect(control(m, { op: "lock" }, NOW)).toEqual({ ok: true });
     expect(m.locked).toBe(true);
-    ownerOp(m, { op: "unlock" }, NOW, all());
+    control(m, { op: "unlock" }, NOW);
     expect(m.locked).toBe(false);
-    expect(ownerOp(m, { op: "close" }, NOW, all())).toEqual({ ok: true, close: true });
+    expect(control(m, { op: "close" }, NOW)).toEqual({ ok: true, close: true });
   });
 
-  it("kicks a player, never the owner or a CPU", () => {
+  it("kicks a player, never the host or a CPU", () => {
     const m = full();
-    expect(ownerOp(m, { op: "kick", seat: 2 }, NOW, all())).toEqual({ ok: true, kick: 2 });
+    expect(control(m, { op: "kick", seat: 2 }, NOW)).toEqual({ ok: true, kick: 2 });
     expect(m.seats[2]).toEqual({ nick: "", cpu: false, token: null });
-    expect(ownerOp(m, { op: "kick", seat: 0 }, NOW, all())).toEqual({
+    expect(control(m, { op: "kick", seat: 0 }, NOW)).toEqual({
       ok: false,
       reason: "That's your seat.",
     });
-    expect(ownerOp(m, { op: "kick", seat: 2 }, NOW, all())).toEqual({
+    expect(control(m, { op: "kick", seat: 2 }, NOW)).toEqual({
       ok: false,
       reason: "Nobody sits there.",
     });
-    expect(ownerOp(m, { op: "kick", seat: 3 }, NOW, all())).toEqual({
+    expect(control(m, { op: "kick", seat: 3 }, NOW)).toEqual({
       ok: false,
       reason: "No such seat.",
     });
   });
 
-  it("lets a new owner kick the member's seat, which then stops being kept", () => {
+  it("lets a new host kick the member's seat, which then stops being kept", () => {
     const m = full();
-    m.ownerSeat = 1;
-    expect(ownerOp(m, { op: "kick", seat: 0 }, NOW, all(1))).toEqual({ ok: true, kick: 0 });
+    m.host = 1;
+    expect(control(m, { op: "kick", seat: 0 }, NOW)).toEqual({ ok: true, kick: 0 });
     expect(m.owner).toBe("");
-    expect(ownerOp(m, { op: "cpu", seat: 1, on: true }, NOW, all())).toEqual({
+    expect(control(m, { op: "cpu", seat: 1, on: true }, NOW)).toEqual({
       ok: false,
       reason: "That's your seat.",
     });
-    expect(ownerOp(m, { op: "cpu", seat: 0, on: true }, NOW, all())).toEqual({ ok: true });
+    expect(control(m, { op: "cpu", seat: 0, on: true }, NOW)).toEqual({ ok: true });
   });
 
   it("sets CPU seats and the number of seats between matches", () => {
     const m = room(3);
-    expect(ownerOp(m, { op: "cpu", seat: 2, on: true }, NOW, all())).toEqual({ ok: true });
+    expect(control(m, { op: "cpu", seat: 2, on: true }, NOW)).toEqual({ ok: true });
     expect(m.seats[2]?.cpu).toBe(true);
     (m.seats[1] as Meta["seats"][number]).token = "t1";
-    expect(ownerOp(m, { op: "cpu", seat: 1, on: true }, NOW, all())).toEqual({
+    expect(control(m, { op: "cpu", seat: 1, on: true }, NOW)).toEqual({
       ok: false,
       reason: "Someone sits there.",
     });
-    expect(ownerOp(m, { op: "cpu", seat: 9, on: true }, NOW, all())).toEqual({
+    expect(control(m, { op: "cpu", seat: 9, on: true }, NOW)).toEqual({
       ok: false,
       reason: "No such seat.",
     });
-    expect(ownerOp(m, { op: "size", seats: 5 }, NOW, all())).toEqual({ ok: true });
+    expect(control(m, { op: "size", seats: 5 }, NOW)).toEqual({ ok: true });
     expect(m.seats.map((s) => s.cpu)).toEqual([false, false, true, true, true]);
-    expect(ownerOp(m, { op: "size", seats: 2 }, NOW, all())).toEqual({ ok: true });
-    expect(ownerOp(m, { op: "size", seats: 1 }, NOW, all())).toEqual({
+    expect(control(m, { op: "size", seats: 2 }, NOW)).toEqual({ ok: true });
+    expect(control(m, { op: "size", seats: 1 }, NOW)).toEqual({
       ok: false,
       reason: "Seats must be 2 to 6.",
     });
-    expect(ownerOp(m, { op: "size", seats: 7 }, NOW, all())).toEqual({
+    expect(control(m, { op: "size", seats: 7 }, NOW)).toEqual({
       ok: false,
       reason: "Seats must be 2 to 6.",
     });
     const f = full();
-    expect(ownerOp(f, { op: "size", seats: 2 }, NOW, all())).toEqual({
+    expect(control(f, { op: "size", seats: 2 }, NOW)).toEqual({
       ok: false,
       reason: "Kick the last player first.",
     });
     f.started = NOW;
-    expect(ownerOp(f, { op: "cpu", seat: 1, on: true }, NOW, all())).toMatchObject({ ok: false });
-    expect(ownerOp(f, { op: "size", seats: 4 }, NOW, all())).toMatchObject({ ok: false });
-    expect(ownerOp(f, { op: "dance" }, NOW, all())).toEqual({
+    expect(control(f, { op: "cpu", seat: 1, on: true }, NOW)).toMatchObject({ ok: false });
+    expect(control(f, { op: "size", seats: 4 }, NOW)).toMatchObject({ ok: false });
+    expect(control(f, { op: "dance" }, NOW)).toEqual({
       ok: false,
       reason: "Unknown control.",
     });
   });
 });
 
-describe("the owner role passes on (AC5.5)", () => {
+describe("the host role passes on (AC5.5, AC6.5)", () => {
   const seated = (seats = 3) => {
     const m = room(seats);
     join(m, hello("Ana", { owner: "owner-hash" }), 0);
@@ -251,90 +245,101 @@ describe("the owner role passes on (AC5.5)", () => {
     return m;
   };
 
-  it("starts with the member's seat 0, kept for its token, and shows who owns it", () => {
+  it("starts with the member's seat 0, kept for its token, and shows who the host is", () => {
     const m = room(2);
-    expect(m).toMatchObject({ ownerSeat: 0, ownerAway: null, reported: 0 });
+    expect(m).toMatchObject({ host: 0, hostAway: null, reported: 0 });
     // Seat 0 is kept before the member's device says hello.
     expect(publicRoom(m, all(), 0).seats[0]?.taken).toBe(true);
-    expect(join(m, hello("Sam"), 0)).toMatchObject({ who: { seat: 1 }, owner: false });
-    expect(publicRoom(m, all(), 0)).toMatchObject({ owner: 0, ownerAway: null });
+    expect(join(m, hello("Sam"), 0)).toMatchObject({ who: { seat: 1 } });
+    expect(publicRoom(m, all(), 0)).toMatchObject({ host: 0, hostAway: null });
   });
 
-  it("passes to the next online player when the owner taps Leave, and opens the seat", () => {
+  it("passes at once to the next online player when the host taps Leave, and opens the seat", () => {
     const m = seated();
     leave(m, 0, all(0, 2));
-    expect(m.ownerSeat).toBe(2);
+    expect(m.host).toBe(2);
     expect(m.owner).toBe("");
     expect(m.seats[0]).toEqual({ nick: "", cpu: false, token: null });
-    // Seat 0 is a free seat now; the member's token no longer gets it.
+    // Seat 0 is a free seat now; the member's token no longer gets it, nor the role.
     expect(join(m, hello("Ana", { owner: "owner-hash" }), 0)).toMatchObject({
       who: { seat: 0 },
       newToken: true,
-      owner: false,
     });
+    expect(m.host).toBe(2);
   });
 
-  it("keeps the role when a player who isn't the owner leaves, or nobody else is here", () => {
+  it("keeps the role when a player who isn't the host leaves, or nobody else is here", () => {
     const m = seated();
     leave(m, 1, all(0, 1));
-    expect(m.ownerSeat).toBe(0);
+    expect(m.host).toBe(0);
     leave(m, 0, all(0));
-    expect(m.ownerSeat).toBe(0);
-    // The next one to sit while nobody holds the owner's seat gets the role.
-    expect(join(m, hello("Lou"), 0)).toMatchObject({ who: { seat: 0 }, owner: true });
+    expect(m.host).toBe(0);
+    // The next one to sit while nobody holds the host's seat becomes the host.
+    expect(join(m, hello("Lou"), 0)).toMatchObject({ who: { seat: 0 } });
+    expect(m.host).toBe(0);
   });
 
-  it("waits 2 minutes after the owner's device drops, then passes it on", () => {
+  it("makes the first player to sit the host when the host's seat is open", () => {
+    const m = seated(2);
+    leave(m, 0, all(0));
+    // Seat 1 comes back first: the host's seat is open, so the role is theirs.
+    expect(join(m, hello("P1", { seat: "t1" }), 0)).toMatchObject({ who: { seat: 1 } });
+    expect(m.host).toBe(1);
+  });
+
+  it("waits 30 seconds after the host's device drops, then passes it on", () => {
+    expect(HOST_WAIT_MS).toBe(30_000);
     const m = seated();
-    expect(ownerDropped(m, all(0, 1), NOW)).toBe(false);
-    expect(ownerDropped(m, all(), NOW)).toBe(false);
-    expect(ownerDropped(m, all(2), NOW)).toBe(true);
-    expect(ownerDropped(m, all(1, 2), NOW + 5)).toBe(false);
-    expect(m.ownerAway).toBe(NOW);
-    expect(alarmAt(m, 2, NOW)).toBe(NOW + OWNER_WAIT_MS);
-    expect(ownerDue(m, all(1, 2), NOW + OWNER_WAIT_MS - 1)).toBe(false);
-    expect(ownerDue(m, all(1, 2), NOW + OWNER_WAIT_MS)).toBe(true);
-    expect(m).toMatchObject({ ownerSeat: 1, ownerAway: null });
+    expect(hostDropped(m, all(0, 1), NOW)).toBe(false);
+    expect(hostDropped(m, all(), NOW)).toBe(false);
+    expect(hostDropped(m, all(2), NOW)).toBe(true);
+    expect(hostDropped(m, all(1, 2), NOW + 5)).toBe(false);
+    expect(m.hostAway).toBe(NOW);
+    expect(alarmAt(m, 2, NOW)).toBe(NOW + HOST_WAIT_MS);
+    expect(hostDue(m, all(1, 2), NOW + HOST_WAIT_MS - 1)).toBe(false);
+    expect(hostDue(m, all(1, 2), NOW + HOST_WAIT_MS)).toBe(true);
+    expect(m).toMatchObject({ host: 1, hostAway: null });
     expect(alarmAt(m, 2, NOW)).toBe(m.expires);
   });
 
-  it("stops the wait when the owner's device comes back", () => {
+  it("stops the wait when the host's device comes back", () => {
     const m = seated();
-    ownerDropped(m, all(1), NOW);
-    expect(join(m, hello("Ana", { owner: "owner-hash" }), 0)).toMatchObject({ owner: true });
-    expect(m.ownerAway).toBeNull();
-    ownerDropped(m, all(1), NOW);
-    expect(ownerDue(m, all(0, 1), NOW + OWNER_WAIT_MS)).toBe(true);
-    expect(m).toMatchObject({ ownerSeat: 0, ownerAway: null });
+    hostDropped(m, all(1), NOW);
+    expect(join(m, hello("Ana", { owner: "owner-hash" }), 0)).toMatchObject({ who: { seat: 0 } });
+    expect(m.hostAway).toBeNull();
+    hostDropped(m, all(1), NOW);
+    expect(hostDue(m, all(0, 1), NOW + HOST_WAIT_MS)).toBe(true);
+    expect(m).toMatchObject({ host: 0, hostAway: null });
   });
 
-  it("lets a player take the role only while the owner is away", () => {
+  it("lets a player take the role only while the host is away", () => {
     const m = seated();
-    expect(takeOwner(m, 1, all(0, 1))).toBe("The owner is here.");
-    expect(takeOwner(m, null, all(1))).toBe("Only a player can be the owner.");
-    ownerDropped(m, all(1), NOW);
-    expect(takeOwner(m, 1, all(1))).toBeNull();
-    expect(m).toMatchObject({ ownerSeat: 1, ownerAway: null });
-    // The member comes back to seat 0, without the role.
-    expect(join(m, hello("Ana", { owner: "owner-hash" }), 0)).toMatchObject({
-      who: { seat: 0 },
-      owner: false,
-    });
+    expect(takeHost(m, 1, all(0, 1))).toBe("The host is here.");
+    expect(takeHost(m, null, all(1))).toBe("Only a player can be the host.");
+    hostDropped(m, all(1), NOW);
+    expect(takeHost(m, 1, all(1))).toBeNull();
+    expect(m).toMatchObject({ host: 1, hostAway: null });
+    // The member comes back to seat 0, as a player.
+    expect(join(m, hello("Ana", { owner: "owner-hash" }), 0)).toMatchObject({ who: { seat: 0 } });
+    expect(m.host).toBe(1);
   });
 
-  it("counts the people seated, and fills in the fields a 0.2.x room lacks", () => {
+  it("counts the people seated, and keeps the host of a room an older release stored", () => {
     const m = seated();
     expect(people(m)).toBe(3);
-    const old = { ...room(2) } as Partial<Meta>;
-    delete old.ownerSeat;
-    delete old.ownerAway;
-    delete old.reported;
-    expect(upgrade(old as Meta)).toMatchObject({ ownerSeat: 0, ownerAway: null, reported: -1 });
+    const { hostAway: _, reported: __, ...rest } = room(2);
+    const old = { ...rest, host: 1, ownerSeat: 0, ownerAway: NOW };
+    const now = upgrade(old);
+    expect(now).toMatchObject({ host: 1, hostAway: null, reported: -1 });
+    expect(now).not.toHaveProperty("ownerSeat");
+    expect(now).not.toHaveProperty("ownerAway");
+    expect(upgrade({ ...rest, host: null, ownerSeat: 2 }).host).toBe(2);
+    expect(upgrade({ ...rest, host: null }).host).toBe(0);
   });
 });
 
-describe("the host (AC6.5)", () => {
-  it("passes to the next online player after the one that left, never a CPU", () => {
+describe("the next host", () => {
+  it("is the next online player after the one that left, never a CPU", () => {
     const m = room(4, 1);
     expect(nextHost(m, all(0, 2), 0)).toBe(2);
     expect(nextHost(m, all(0, 1), 1)).toBe(0);
@@ -366,22 +371,27 @@ describe("moves (AC6.3)", () => {
 describe("envelopes", () => {
   const msg = (o: unknown) => JSON.stringify(o);
   it("pass a known type for the sender, of the protocol, within the size", () => {
-    expect(envelope(msg({ v: 1, t: "move", seq: 1 }), false)).toMatchObject({ ok: true });
-    expect(
-      envelope(msg({ v: 1, t: "state", views: "x".repeat(CAPS.message) }), true),
-    ).toMatchObject({ ok: true });
+    const v = PROTOCOL;
+    expect(envelope(msg({ v, t: "move", seq: 1 }), false)).toMatchObject({ ok: true });
+    expect(envelope(msg({ v, t: "control", op: "start" }), false)).toMatchObject({ ok: true });
+    expect(envelope(msg({ v, t: "state", views: "x".repeat(CAPS.message) }), true)).toMatchObject({
+      ok: true,
+    });
   });
 
+  const v = PROTOCOL;
   it.each([
     [new ArrayBuffer(2), false, "bad"],
     ["{", false, "bad"],
     ["[1]", false, "bad"],
     ["null", false, "bad"],
-    [msg({ v: 2, t: "hello" }), false, "version"],
-    [msg({ v: 1, t: "state" }), false, "bad"],
-    [msg({ v: 1, t: "nope" }), true, "bad"],
-    [msg({ v: 1, t: "move", pad: "x".repeat(CAPS.message) }), false, "big"],
-    [msg({ v: 1, t: "state", pad: "x".repeat(CAPS.state) }), true, "big"],
+    // A tab open on the release before the one Host role (0.5.0) is asked to reload.
+    [msg({ v: 1, t: "hello" }), false, "version"],
+    [msg({ v, t: "state" }), false, "bad"],
+    [msg({ v, t: "nope" }), true, "bad"],
+    [msg({ v, t: "take-owner" }), false, "bad"],
+    [msg({ v, t: "move", pad: "x".repeat(CAPS.message) }), false, "big"],
+    [msg({ v, t: "state", pad: "x".repeat(CAPS.state) }), true, "big"],
   ])("refuse %#", (raw, isHost, code) => {
     expect(envelope(raw as string, isHost as boolean)).toMatchObject({ ok: false, code });
   });

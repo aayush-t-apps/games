@@ -69,6 +69,18 @@ describe("store", () => {
     expect(data.recent[0]).toEqual(result(false, "memory", "friends"));
   });
 
+  it("keeps a puzzle's score under its pick: a difficulty or a topic (change 0006)", () => {
+    const storage = memory();
+    const store = createStore(storage);
+    store.record(result(true, "sudoku", "expert"));
+    store.record(result(true, "crossword", "today"));
+    const data = createStore(storage).get();
+    expect((data.scores as Record<string, unknown>).sudoku).toEqual({
+      expert: { played: 1, won: 1 },
+    });
+    expect(data.recent[0]).toEqual(result(true, "crossword", "today"));
+  });
+
   it("plays on when storage is blocked, and says scores aren't kept", () => {
     const store = createStore(blocked);
     expect(store.kept).toBe(false);
@@ -105,6 +117,10 @@ describe("store", () => {
       [{ ...good, scores: { ludo: 3 } }, "The save's scores aren't readable."],
       [
         { ...good, scores: { ludo: { easy: { played: 1, won: 2 } } } },
+        "The save's scores aren't readable.",
+      ],
+      [
+        { ...good, scores: { ludo: { "Not a level": { played: 1, won: 0 } } } },
         "The save's scores aren't readable.",
       ],
       [{ ...good, recent: {} }, "The save's results aren't readable."],

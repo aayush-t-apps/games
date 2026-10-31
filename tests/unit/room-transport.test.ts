@@ -2,6 +2,7 @@
 // pings, and stopping for good when the room ends or refuses the device. A fake WebSocket here;
 // tests/unit/objects.test.ts and tests/e2e run the real one.
 import { beforeEach, describe, expect, it } from "vitest";
+import { PROTOCOL } from "../../site/lib/engine.js";
 import {
   BACKOFF,
   createRoom,
@@ -81,7 +82,7 @@ describe("the room transport", () => {
     room.onMessage((m: unknown) => got.push(m));
     last().open();
     expect(JSON.parse(last().sent[0] as string)).toEqual({
-      v: 1,
+      v: PROTOCOL,
       t: "hello",
       nick: "Sam",
       ownerToken: "own",
@@ -101,7 +102,7 @@ describe("the room transport", () => {
     expect(room.peers()).toEqual([{ seat: 0, name: "Ana", kind: "human", online: true }]);
     expect(got.map((m) => (m as { t: string }).t)).toEqual(["link", "welcome"]);
     expect(room.send({ t: "move", seq: 0 })).toBe(true);
-    expect(last().sent.at(-1)).toBe('{"v":1,"t":"move","seq":0}');
+    expect(last().sent.at(-1)).toBe(`{"v":${PROTOCOL},"t":"move","seq":0}`);
   });
 
   it("reconnects after a drop, with backoff, and gives its seat token back (AC6.4)", () => {

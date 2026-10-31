@@ -9,20 +9,22 @@ a laptop, or a TV browser. The one job: pick a game and be playing in two taps, 
 
 | Screen | Primary action |
 |---|---|
-| Hub: "Pick a game", Play with friends, the shelf of six games, scores, install | **Play** (one per game) |
-| Setup: How to play, seats (you, people, CPUs), CPU level, kid mode | **Start** |
+| Hub: "Pick a game", Join friends (a code), the shelf of eight games, scores, install | **Play** (one per game) |
+| Setup: How to play, a puzzle's pick, seats (you, then CPU or Person here), CPU level, kid mode, Play with friends | **Start** |
 | Match: the felt table, the players, the moves | play a move |
 | Result: the places | **Play again** |
 | Settings (a bottom sheet on phones): name, kid mode, theme, sound, Download all for offline, Install | **Done** |
 | Invite friends (members): your name, seats, CPU seats, level | **Start the room** |
 | Join (a room's link): a nickname | **Join** (or **Join as Table**) |
-| Lobby (`/r/<code>`): an Invite panel (the code large, its QR code, the link) and a Seats panel (a row per seat, with owner, host and you tags) | **Start** (the owner), **Share** (everyone) |
+| Lobby (`/r/<code>`): an Invite panel (the code large, its QR code, the link) and a Seats panel (a row per seat, with host and you tags; the host tag is yellow) | **Start** (the host), **Share** (everyone), **Make me host** (only while the host is away) |
 | Online scores (after an online match): per game, top players and the last matches | pick a game |
 | Admin (`/admin`): Overview (fact cards), Games (a list), Rooms, Scores (Export, Restore) | **Refresh**, **Save**, **Close**, **Export** |
 
-Nothing is asked before the first game: the hub opens on the games. Its **Play with friends**
-panel is a strip of felt with a room-code field and **Join**, and a quiet **Sign in to invite
-friends** link; a member gets **Invite friends** on each game. The brand is the logo, a card and a
+Nothing is asked before the first game: the hub opens on the games. Its **Join friends** panel is
+a strip of felt with a room-code field and **Join**. A game's Setup ends with a felt **Play with
+friends** part: **Invite friends** for a member, the sign-in link for a guest, or the offline note.
+The Settings button on the bar shows who plays here (the name, a **Member** or **Guest** tag), and
+Settings holds sign-in, sign-out and Admin. Back goes one screen back. The brand is the logo, a card and a
 red die on felt with no text, beside "Games" in the wooden bar. Forms put each label above its
 full-width field. Panels are cards: surface colour, a 2 px line border and the 10 px radius. Red
 outlines mark what ends something for others (**Close the room**, **Kick**). The admin tables

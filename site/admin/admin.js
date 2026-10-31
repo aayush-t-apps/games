@@ -4,7 +4,7 @@ import { el } from "/lib/ui.js";
 import { sortable } from "/admin/sort.js";
 
 const TABS = ["Overview", "Games", "Rooms", "Scores"];
-const TYPES = { cards: "Cards", board: "Board game", kids: "Kids" };
+const TYPES = { cards: "Cards", board: "Board game", kids: "Kids", puzzles: "Puzzle" };
 const DAY = 24 * 60 * 60 * 1000;
 const RESTORE_DAYS = 30;
 const NEW_GAME = "https://github.com/aayush-t-apps/shipify/issues/new?title=games%3A%20add%20";
