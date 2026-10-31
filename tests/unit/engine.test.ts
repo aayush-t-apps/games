@@ -61,7 +61,7 @@ describe("engine", () => {
   it("sends each seat its view, with legal moves only for the seat to move", () => {
     const { engine, views } = setup(["human", "human"]);
     engine.start();
-    expect(views(0).at(-1)).toMatchObject({ v: 1, seq: 0, turn: 0, view: { total: 0 } });
+    expect(views(0).at(-1)).toMatchObject({ v: PROTOCOL, seq: 0, turn: 0, view: { total: 0 } });
     expect(views(0).at(-1)?.legal).toHaveLength(2);
     expect(views(1).at(-1)?.legal).toEqual([]);
   });

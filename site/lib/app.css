@@ -1304,7 +1304,7 @@ button.danger {
   background: color-mix(in srgb, var(--felt) 14%, transparent);
   border: 1px solid var(--line);
 }
-.tag.owner {
+.tag.host {
   background: var(--yellow);
   color: var(--ink);
   border-color: var(--yellow);

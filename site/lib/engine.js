@@ -2,7 +2,7 @@
 // checks and applies them, sends each seat its view, runs the CPU seats, and keeps `seq` and the
 // history for Undo. It never touches the DOM, so the same engine runs a solo match or a room.
 //
-// Messages (all with `v: 1`):
+// Messages (all with `v: PROTOCOL`):
 //   to the engine:   {t: "move", seat, seq, move} · {t: "undo", seat} · {t: "hint", seat}
 //   from the engine: {t: "view", seat, seq, turn, view, legal, note, last, places}, one per seat,
 //                    then {t: "public", seq, turn, view, legal: [], note, last, places}: the view
@@ -13,7 +13,7 @@
 // `from` goes on from it on a new host, and a seat that is away for `idleMs` on its turn is played
 // by the CPU until it's back.
 
-export const PROTOCOL = 1;
+export const PROTOCOL = 2;
 export const CRASH = "Something went wrong. Start again?";
 export const IDLE_MS = 60_000;
 

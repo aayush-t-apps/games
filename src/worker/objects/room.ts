@@ -10,19 +10,19 @@ import {
   allow,
   CAPS,
   checkMove,
+  control,
   envelope,
+  hostDropped,
+  hostDue,
   join,
   leave,
   type Meta,
   matchRecord,
-  nextHost,
-  ownerDropped,
-  ownerDue,
-  ownerOp,
+  PROTOCOL,
   people,
   publicRoom,
   type Snap,
-  takeOwner,
+  takeHost,
   upgrade,
   validPlaces,
   type Who,
@@ -94,17 +94,10 @@ export class Room extends DurableObject<Env> {
         return this.move(ws, m, who, msg);
       case "take-host":
         return this.takeHost(ws, m, who);
-      case "take-owner": {
-        const why = takeOwner(m, who.seat, this.online());
-        if (why) return this.send(ws, { t: "refused", reason: why });
-        await this.save(m);
-        await this.ctx.storage.setAlarm(alarmAt(m, this.ctx.getWebSockets().length, Date.now()));
-        return this.seats(m);
-      }
       case "leave":
         return this.leave(ws, m, who);
-      case "owner":
-        return this.owner(ws, m, who, msg);
+      case "control":
+        return this.control(ws, m, who, msg);
       case "state":
         return this.state(ws, m, msg);
       case "refused":
@@ -144,8 +137,9 @@ export class Room extends DurableObject<Env> {
     const now = Date.now();
     const sockets = this.ctx.getWebSockets().length;
     if (now >= m.expires || sockets === 0) return this.end("This room has ended.");
-    if (ownerDue(m, this.online(), now)) {
+    if (hostDue(m, this.online(), now)) {
       await this.save(m);
+      await this.handHost(m);
       this.seats(m);
     }
     await this.ctx.storage.setAlarm(alarmAt(m, sockets, now));
@@ -176,14 +170,15 @@ export class Room extends DurableObject<Env> {
         this.refuse(other, "replaced", "This seat opened on another tab or device.", true);
     ws.serializeAttachment(joined.who);
     const online = this.online();
-    if (seat !== null && (m.host === null || !online.has(m.host) || m.host === seat)) m.host = seat;
+    // A player is back while the host's device is away (everyone had gone): the wait starts.
+    if (hostDropped(m, online, Date.now()))
+      await this.ctx.storage.setAlarm(alarmAt(m, this.ctx.getWebSockets().length, Date.now()));
     await this.save(m);
     await this.report(m);
     this.send(ws, {
       t: "welcome",
       seat,
       seatToken: joined.newToken ? token : undefined,
-      owner: joined.owner,
       room: publicRoom(m, online, this.spectators()),
     });
     this.seats(m);
@@ -198,28 +193,29 @@ export class Room extends DurableObject<Env> {
     const why = checkMove(m, await this.snap(), who.seat, msg.seq);
     if (why) return this.send(ws, { t: "refused", reason: why });
     const host = this.seatSockets(m.host)[0];
-    if (!host) return this.send(ws, { t: "refused", reason: "The host is away. Wait a moment." });
+    if (!host) return this.send(ws, { t: "refused", reason: "Waiting for the host…" });
     this.send(host, { t: "move", seat: who.seat, seq: msg.seq, move: msg.move });
   }
 
+  /** Make me host (AC6.5): only while the host's device is away. */
   private async takeHost(ws: WebSocket, m: Meta, who: Who): Promise<void> {
-    if (who.seat === null) return this.refuse(ws, "role", "Only a player can be the host.");
     if (m.host === who.seat) return;
-    m.host = who.seat;
+    const why = takeHost(m, who.seat, this.online());
+    if (why) return this.send(ws, { t: "refused", reason: why });
     await this.save(m);
+    await this.ctx.storage.setAlarm(alarmAt(m, this.ctx.getWebSockets().length, Date.now()));
     await this.handHost(m);
     this.seats(m);
   }
 
-  private async owner(ws: WebSocket, m: Meta, who: Who, msg: Out): Promise<void> {
-    if (who.seat !== m.ownerSeat)
-      return this.refuse(ws, "role", "Only the room owner can do that.");
-    const done = ownerOp(m, msg, Date.now(), this.online());
+  private async control(ws: WebSocket, m: Meta, who: Who, msg: Out): Promise<void> {
+    if (who.seat !== m.host) return this.refuse(ws, "role", "Only the host can do that.");
+    const done = control(m, msg, Date.now());
     if (!done.ok) return this.send(ws, { t: "refused", reason: done.reason });
-    if (done.close) return this.end("The owner closed the room.");
+    if (done.close) return this.end("The host closed the room.");
     if (done.kick !== undefined)
       for (const s of this.seatSockets(done.kick))
-        this.refuse(s, "kicked", "The owner took your seat.", true);
+        this.refuse(s, "kicked", "The host took your seat.", true);
     if (done.start) {
       this.snapshot = null;
       await this.ctx.storage.delete("snap");
@@ -230,12 +226,14 @@ export class Room extends DurableObject<Env> {
     this.seats(m);
   }
 
-  /** Leave the room (AC5.5): the seat opens, the owner role passes on, and the socket closes. */
+  /** Leave the room (AC5.5): the seat opens, the host role passes on, and the socket closes. */
   private async leave(ws: WebSocket, m: Meta, who: Who): Promise<void> {
     if (who.seat !== null) {
+      const host = m.host;
       leave(m, who.seat, this.online(ws));
       await this.save(m);
       await this.report(m);
+      if (m.host !== host) await this.handHost(m, ws);
     }
     await this.left(ws);
     // A watcher now, so the close that follows changes nothing more.
@@ -292,18 +290,10 @@ export class Room extends DurableObject<Env> {
     const online = this.online(ws);
     const now = Date.now();
     const sockets = this.ctx.getWebSockets().filter((s) => s !== ws).length;
-    if (who?.seat != null && who.seat === m.host && !online.has(who.seat)) {
-      const next = nextHost(m, online, who.seat);
-      if (next !== null) {
-        m.host = next;
-        await this.save(m);
-        await this.handHost(m, ws);
-      }
-    }
-    // The owner's device dropped: its role passes on at the alarm, unless it comes back (AC5.5).
-    // Nobody left: no wait, the room just ends 10 minutes later.
-    const waits = who?.seat === m.ownerSeat && ownerDropped(m, online, now);
-    if (sockets === 0 && m.ownerAway !== null) m.ownerAway = null;
+    // The host's device dropped: the game waits, and the role passes on at the alarm unless it
+    // comes back (AC6.5). Nobody left: no wait, the room just ends 10 minutes later.
+    const waits = who?.seat === m.host && hostDropped(m, online, now);
+    if (sockets === 0 && m.hostAway !== null) m.hostAway = null;
     if (waits || sockets === 0) {
       await this.save(m);
       await this.ctx.storage.setAlarm(alarmAt(m, sockets, now));
@@ -399,7 +389,7 @@ export class Room extends DurableObject<Env> {
 
   private send(ws: WebSocket, msg: Out): void {
     try {
-      ws.send(JSON.stringify({ v: 1, ...msg }));
+      ws.send(JSON.stringify({ v: PROTOCOL, ...msg }));
     } catch {
       // The socket is closing; it reconnects by itself.
     }
