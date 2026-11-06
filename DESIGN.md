@@ -9,7 +9,7 @@ a laptop, or a TV browser. The one job: pick a game and be playing in two taps, 
 
 | Screen | Primary action |
 |---|---|
-| Hub: "Pick a game", Join friends (a code), the shelf of eleven games, scores, install | **Play** (one per game) |
+| Hub: "Pick a game", Join friends (a code), Players and Kind filter chips, the shelf of twelve games, scores, install | **Play** (one per game) |
 | Setup: How to play, a puzzle's pick, seats (you, then CPU or Person here), CPU level, kid mode, Play with friends | **Start** |
 | Match: the felt table, the players, the moves | play a move |
 | Result: the places | **Play again** |

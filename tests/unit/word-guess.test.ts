@@ -4,7 +4,14 @@ import { describe, expect, it } from "vitest";
 import game, { isGuess, marks, TOPICS } from "../../site/games/word-guess/rules.js";
 
 type Move = { t: string; word?: string; i?: number };
-type State = { word: string; guesses: string[]; marks: string[]; shown: number[]; note: string | null; moves: number };
+type State = {
+  word: string;
+  guesses: string[];
+  marks: string[];
+  shown: number[];
+  note: string | null;
+  moves: number;
+};
 const rules = game as unknown as {
   init(seats: number, seed: number, pick?: string): State;
   view(s: State, seat: number | null): Record<string, unknown>;
@@ -57,7 +64,8 @@ describe("Word Guess", () => {
   });
 
   it("picks the word from the topic, and the same word for the same seed (today's word)", () => {
-    for (let seed = 1; seed < 20; seed++) expect(TOPICS.places.split(" ")).toContain(rules.init(1, seed, "places").word);
+    for (let seed = 1; seed < 20; seed++)
+      expect(TOPICS.places.split(" ")).toContain(rules.init(1, seed, "places").word);
     expect(rules.init(1, 20261106, "today").word).toBe(rules.init(1, 20261106, "today").word);
   });
 
@@ -71,14 +79,22 @@ describe("Word Guess", () => {
     expect(s.note).toBe("@0 found TIGER in 2 guesses");
     expect(rules.winner(s)).toEqual({ places: [[0]] });
     expect(rules.legalMoves(s, 0)).toEqual([]);
-    expect(reason(() => rules.apply(s, 0, { t: "guess", word: "zebra" }))).toBe("You found the word.");
+    expect(reason(() => rules.apply(s, 0, { t: "guess", word: "zebra" }))).toBe(
+      "You found the word.",
+    );
   });
 
   it("refuses a guess that isn't a word of the list, or was tried, and says why", () => {
     const s = rules.apply(withWord("tiger"), 0, { t: "guess", word: "train" });
-    expect(reason(() => rules.apply(s, 0, { t: "guess", word: "trai" }))).toBe("Type a word of five letters.");
-    expect(reason(() => rules.apply(s, 0, { t: "guess", word: "xqzzy" }))).toBe("XQZZY isn't in the word list.");
-    expect(reason(() => rules.apply(s, 0, { t: "guess", word: "train" }))).toBe("You tried TRAIN already.");
+    expect(reason(() => rules.apply(s, 0, { t: "guess", word: "trai" }))).toBe(
+      "Type a word of five letters.",
+    );
+    expect(reason(() => rules.apply(s, 0, { t: "guess", word: "xqzzy" }))).toBe(
+      "XQZZY isn't in the word list.",
+    );
+    expect(reason(() => rules.apply(s, 0, { t: "guess", word: "train" }))).toBe(
+      "You tried TRAIN already.",
+    );
   });
 
   it("hints one right letter in its square, then the word once every square is known", () => {
@@ -88,7 +104,9 @@ describe("Word Guess", () => {
     s = rules.apply(s, 0, { t: "show", i: 1 });
     expect(s.note).toBe("@0 took a hint: letter 2 is I");
     expect(rules.view(s, 0).shown).toEqual([[1, "i"]]);
-    expect(reason(() => rules.apply(s, 0, { t: "show", i: 1 }))).toBe("That letter is known already.");
+    expect(reason(() => rules.apply(s, 0, { t: "show", i: 1 }))).toBe(
+      "That letter is known already.",
+    );
     for (const i of [2, 3, 4]) s = rules.apply(s, 0, { t: "show", i });
     expect(rules.legalMoves(s, 0)).toEqual([{ t: "guess", word: "tiger" }]);
   });

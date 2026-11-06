@@ -104,10 +104,107 @@ export function showHub() {
   show(
     el("h1", { class: "hub-title" }, "Pick a game"),
     el("div", { id: "online-slot" }, onlineSection()),
+    filtersBar(),
     el("ul", { class: "shelf" }, games.map(gameBox)),
     el("div", { class: "extras" }, scoresSection(), installSection()),
   );
+  applyFilters();
   markCached();
+}
+
+// The hub's filters: how many play, and what kind of game. They stay as set until the page closes.
+const PEOPLE = [
+  ["any", "Any"],
+  ["1", "1"],
+  ["2", "2"],
+  ["3", "3–4"],
+  ["5", "5–6"],
+];
+const KINDS = [
+  ["all", "All"],
+  ["kids", "Kids"],
+  ["words", "Words"],
+  ["cards", "Cards"],
+  ["board", "Board"],
+  ["puzzles", "Puzzles"],
+];
+const filters = { people: "any", kind: "all" };
+
+/** Does a game fit the filters? Kids: a kids' game, or one for ages 5 and up or younger. */
+export function fits(g, { people, kind }) {
+  const [min, max] = g.players;
+  const n = Number(people);
+  const forPeople = people === "any" || (n === 1 ? min === 1 : n === 2 ? min <= 2 && max >= 2 : max >= n);
+  const forKind =
+    kind === "all" ||
+    (kind === "kids"
+      ? g.type === "kids" || Number.parseInt(g.ages, 10) <= 5
+      : kind === "words"
+        ? Boolean(g.tags?.includes("words"))
+        : g.type === kind);
+  return forPeople && forKind;
+}
+
+function filtersBar() {
+  const group = (label, key, options) =>
+    el(
+      "div",
+      { class: "filter", role: "group", "aria-label": label },
+      el("span", { class: "filter-label", "aria-hidden": "true" }, label),
+      options.map(([id, name]) =>
+        el(
+          "button",
+          {
+            type: "button",
+            class: "filter-chip",
+            dataset: { filter: key, value: id },
+            "aria-label": `${label}: ${name}`,
+            onclick: () => {
+              filters[key] = id;
+              applyFilters();
+            },
+          },
+          name,
+        ),
+      ),
+    );
+  return el(
+    "div",
+    { class: "filters" },
+    group("Players", "people", PEOPLE),
+    group("Kind", "kind", KINDS),
+    el(
+      "p",
+      { class: "filter-none", hidden: true },
+      "No game fits both. ",
+      el(
+        "button",
+        {
+          type: "button",
+          class: "ghost",
+          onclick: () => {
+            Object.assign(filters, { people: "any", kind: "all" });
+            applyFilters();
+          },
+        },
+        "Show all games",
+      ),
+    ),
+  );
+}
+
+/** Show the games that fit the filters, and mark the chips that are on. */
+function applyFilters() {
+  for (const chip of main.querySelectorAll(".filter-chip"))
+    chip.setAttribute("aria-pressed", String(filters[chip.dataset.filter] === chip.dataset.value));
+  let shown = 0;
+  for (const box of main.querySelectorAll(".shelf > li")) {
+    const g = games.find((x) => x.id === box.dataset.game);
+    box.hidden = !g || !fits(g, filters);
+    if (!box.hidden) shown++;
+  }
+  const none = main.querySelector(".filter-none");
+  if (none) none.hidden = shown > 0;
 }
 
 function gameBox(g) {
@@ -1124,6 +1221,7 @@ async function checkOnline() {
   redrawOnline();
   if (screen === "hub") {
     main.querySelector(".shelf")?.replaceChildren(...games.map(gameBox));
+    applyFilters();
     markCached();
   }
 }

@@ -13,6 +13,7 @@ const GAMES = [
   "Quiz Race",
   "Crossword",
   "Word Tiles",
+  "Word Guess",
 ];
 
 async function open(page: Page) {
@@ -30,7 +31,7 @@ const turn = (page: Page) => page.locator("#turn");
 const freeColumn = (page: Page) =>
   page.getByRole("button", { name: /^Column \d, \d free$/ }).first();
 
-test("the hub lists the eleven games with their type, players and ages (AC1.1)", async ({
+test("the hub lists the twelve games with their type, players and ages (AC1.1)", async ({
   page,
 }) => {
   await open(page);
@@ -122,6 +123,63 @@ test("Word Tiles: tiles go on the board, the words and points show, Play sends t
   );
   await expect(page.locator("#live")).toHaveText(/^CPU 1 (played|swapped|passed)/);
   await expect(turn(page)).toHaveText("Your turn");
+});
+
+test("Word Guess: pick a topic, type a word, see its colours, and Hint shows a letter (change 0009)", async ({
+  page,
+}) => {
+  await open(page);
+  await setup(page, "Word Guess");
+  await expect(page.getByRole("radio", { name: "Today's word" })).toBeChecked();
+  await page.getByRole("radio", { name: "Places" }).check();
+  await page.getByRole("button", { name: "Start" }).click();
+  await expect(page.locator(".wg-topic")).toHaveText("Places: a word of five letters");
+  await expect(page.locator(".wg-row")).toHaveCount(6);
+  // Too short: it says so. Then the screen's keys and the device's keyboard both type.
+  for (const k of ["s", "l"])
+    await page.getByRole("button", { name: k.toUpperCase(), exact: true }).click();
+  await page.getByRole("button", { name: "Enter" }).click();
+  await expect(page.locator("#msg")).toHaveText("Type five letters, then Enter.");
+  await page.keyboard.type("ate");
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#live")).toHaveText(/^Player (tried|found) SLATE/);
+  await expect(
+    page.locator(".wg-row").first().locator(".wg-cell.g, .wg-cell.y, .wg-cell.n"),
+  ).toHaveCount(5);
+  // A word that isn't one: refused, with the reason.
+  await page.keyboard.type("xqzzy");
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#msg")).toHaveText("XQZZY isn't in the word list.");
+  await page.getByRole("button", { name: "Hint" }).click();
+  await expect(page.locator("#live")).toHaveText(/^Player took a hint: letter \d is [A-Z]/);
+});
+
+test("the hub's filters show the games for that many players and that kind", async ({ page }) => {
+  await open(page);
+  const shown = page.locator(".shelf > li:not([hidden]) h2");
+  await page.getByRole("button", { name: "Kind: Words" }).click();
+  await expect(shown).toHaveText(["Crossword", "Word Tiles", "Word Guess"]);
+  await page.getByRole("button", { name: "Players: 2" }).click();
+  await expect(shown).toHaveText(["Word Tiles"]);
+  await page.getByRole("button", { name: "Kind: Kids" }).click();
+  await expect(shown).toHaveText([
+    "Four in a Row",
+    "Ludo",
+    "Snakes and Ladders",
+    "Go Fish",
+    "Memory",
+    "Quiz Race",
+  ]);
+  await expect(page.getByRole("button", { name: "Kind: Kids" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.getByRole("button", { name: "Players: 5–6" }).click();
+  await expect(shown).toHaveText(["Go Fish"]);
+  await page.getByRole("button", { name: "Kind: Puzzles" }).click();
+  await expect(shown).toHaveCount(0);
+  await page.getByRole("button", { name: "Show all games" }).click();
+  await expect(shown).toHaveCount(GAMES.length);
 });
 
 test("Back goes one screen back, asks before it leaves a match, and stays in the app (AC10.1)", async ({

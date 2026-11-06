@@ -1,6 +1,6 @@
 # Games: agent guide
 
-A public hub of nine classic card, board, word and kids' games and two puzzles (Sudoku, Crossword) that anyone plays in a browser or as an installed app, solo against the CPU or pass-and-play, offline, or in online rooms that members start and anyone joins by link or code, with shared scores.
+A public hub of nine classic card, board, word and kids' games and three puzzles (Sudoku, Crossword, Word Guess) that anyone plays in a browser or as an installed app, solo against the CPU or pass-and-play, offline, or in online rooms that members start and anyone joins by link or code, with shared scores.
 
 A Shipify **app** (stack `ts-static` 1.2.0, on Cloudflare Workers). It installs, runs,
 tests and deploys on its own through `make`.
@@ -37,8 +37,9 @@ data) and the look in `DESIGN.md`.
   and its transport), `rng.js`, `deck.js`, `board.js` (for the rules), `cards.js` (SVG drawn by
   code), `ui.js`, `input.js`, `layout.js`, `store.js`, `install.js`, `app.css`. Online play:
   `online.js` (loaded only for it), `net/room.js` (the `room` transport), `qr.js`.
-- `site/games/<id>/rules.js` and `view.js`, and `site/games/index.json`. Word Tiles' word list is
-  the last line of its `rules.js`, made by `tools/word-list.mjs` (its header says how).
+- `site/games/<id>/rules.js` and `view.js`, and `site/games/index.json`. Word Tiles' word list and
+  Word Guess's guesses are the last line of their `rules.js`, made by `tools/word-list.mjs` (its
+  header says how). A word game has `"tags": ["words"]` in `index.json` (the hub's Words filter).
 - `site/member/` (Access returns members here) and `site/admin/` (the owner's page).
 - `src/worker/`: `app.ts` (the `/api/*` routes), `access.ts` (the Access token check),
   `checks.ts` (input), `room-logic.ts` and `hub-sql.ts` (the objects' rules, unit tested in Node),

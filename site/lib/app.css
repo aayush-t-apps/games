@@ -266,6 +266,38 @@ main {
 #main > * {
   animation: fade 0.2s ease-out;
 }
+/* Filters over the shelf: how many play, and what kind of game */
+.filters {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0.25rem;
+}
+.filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+.filter-label {
+  font-weight: 800;
+  min-width: 4.5rem;
+}
+.filter-chip {
+  min-width: 0;
+  padding: 0.3rem 0.85rem;
+  border-radius: 999px;
+  border-color: var(--wood);
+}
+.filter-chip[aria-pressed="true"] {
+  background: var(--wood);
+  color: #fff;
+}
+.filter-none {
+  margin: 0.5rem 0;
+}
+.box[hidden] {
+  display: none;
+}
 .shelf {
   list-style: none;
   padding: 0;

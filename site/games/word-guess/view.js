@@ -18,10 +18,11 @@ const TOPIC = {
 };
 const SAID = { g: "right", y: "in the word, another square", "-": "not in the word" };
 
-// What this device keeps between draws: the letters typed in the open row, how many guesses
-// there were when they were typed, and the last hint taken.
+// What this device keeps between draws: the letters typed in the open row, how many guesses and
+// shown letters there were when they were typed, and the last hint taken.
 let typed = "";
 let seenGuesses = -1;
+let seenShown = 0;
 let hintSeen = null;
 
 const CSS = `
@@ -88,11 +89,13 @@ export default {
   render(box, ctx) {
     if (!document.getElementById("word-guess-style")) document.head.append(el("style", { id: "word-guess-style" }, CSS));
     const v = ctx.view;
-    if (ctx.first) [typed, seenGuesses, hintSeen] = ["", -1, null];
+    if (ctx.first) [typed, seenGuesses, seenShown, hintSeen] = ["", -1, 0, null];
     const fresh = seenGuesses >= 0 && v.guesses.length > seenGuesses;
-    if (v.guesses.length !== seenGuesses) {
+    // A new guess, or a letter shown by a hint, clears the open row (the letter shows there).
+    if (v.guesses.length !== seenGuesses || v.shown.length !== seenShown) {
       typed = "";
       seenGuesses = v.guesses.length;
+      seenShown = v.shown.length;
     }
     // A hint: a letter is shown at once (a move), or, with every letter known, the word is typed in.
     if (ctx.hint && ctx.hint !== hintSeen) {

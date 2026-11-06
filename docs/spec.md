@@ -7,7 +7,7 @@
 
 A game room for family, kids and friends at `games.app.a69x.in`. Anyone opens it in a browser on a
 phone, tablet, laptop or TV, or installs it as an app, and plays nine classic games solo against the
-CPU or pass-and-play on one device, offline, and two puzzles (Sudoku, Crossword). Kid mode teaches. Scores stay in that browser. Members
+CPU or pass-and-play on one device, offline, and three puzzles (Sudoku, Crossword, Word Guess). Filters on the hub find a game by players and kind. Kid mode teaches. Scores stay in that browser. Members
 (signed in with Cloudflare Access) start online rooms; anyone joins one by link, code or QR code
 with a nickname, from any device, and the online scores are shared. The owner runs it from
 `/admin`. This is the [games plan v5][p] (task #613), tasks 1 and 3.
@@ -26,8 +26,8 @@ the rules), counting solo play on the server.
 
 - **US1 (P1): Play a game against the CPU**. As anyone, I want to pick a game and play it against
   CPU players, so that I can play alone on any device.
-  - AC1.1 WHEN I open `/` THE APP SHALL list the eleven games (Four in a Row, Wild Jacks, Sudoku, Ludo,
-    Snakes and Ladders, Crazy Eights, Go Fish, Memory, Quiz Race, Crossword, Word Tiles), in that order, from `site/games/index.json`, each with its type,
+  - AC1.1 WHEN I open `/` THE APP SHALL list the twelve games (Four in a Row, Wild Jacks, Sudoku, Ludo,
+    Snakes and Ladders, Crazy Eights, Go Fish, Memory, Quiz Race, Crossword, Word Tiles, Word Guess), in that order, from `site/games/index.json`, each with its type,
     players and ages.
   - AC1.2 WHEN I start a game with 1 human and 1–5 CPU seats (within the game's player range) and a
     level (easy, normal, hard) THE APP SHALL play the match to the end, with CPU moves after a short
@@ -208,6 +208,24 @@ the rules), counting solo play on the server.
     other player loses their tiles' points and that player gains them all; WHEN every player
     passed or swapped twice in a row it SHALL end it, each losing their tiles' points. The most
     points wins.
+- **US15 (P2): Word Guess, a word of five letters by topic** (change 0010). As a player, I want
+  to find a hidden word from colour clues, from a topic I pick, so that I play a short word
+  puzzle alone.
+  - AC15.1 WHEN I start Word Guess with **Today's word** THE APP SHALL give every device the same
+    word that day; WHEN I pick a topic (Places, Animals, Food, Nature, Home, Sports, or A mix) it
+    SHALL pick the word from that topic's list.
+  - AC15.2 WHEN I enter a word of five letters from the word list THE APP SHALL mark each letter
+    green (right square), yellow (in the word, another square) or grey (not in it, or not again),
+    and colour the keyboard's keys the same; else it SHALL say why in one line.
+  - AC15.3 WHEN I find the word THE APP SHALL say how many guesses it took; there is no limit on
+    guesses (six rows show, more come as needed), and **Hint** shows one right letter in its
+    square, or types in the word once every square is known.
+- **US16 (P2): Find a game fast** (change 0010). As anyone, I want to filter the hub by how many
+  play and by kind, so that I find a game for who is here.
+  - AC16.1 WHEN I tap a **Players** chip (Any, 1, 2, 3–4, 5–6) or a **Kind** chip (All, Kids,
+    Words, Cards, Board, Puzzles) THE APP SHALL show only the games that fit both, and say "No
+    game fits both" with **Show all games** when none does. Kids: a kids' game, or one for ages 5+
+    or younger. Words: Crossword, Word Tiles and Word Guess.
 
 ## UI
 
@@ -225,7 +243,8 @@ Design brief (`DESIGN.md`), in short:
   bar beside "Games" and as the app's icons.
 - **Top bar:** the logo and "Games" (to the hub), the Offline mark, and the Settings button with
   the device's name and a **Member** or **Guest** tag (when online play is set up).
-- **Screens (one primary action each):** Hub ("Pick a game", no question first; **Play**), Setup
+- **Screens (one primary action each):** Hub ("Pick a game", no question first; the **Players**
+  and **Kind** filter chips; **Play**), Setup
   (How to play, a puzzle's pick, seats as **CPU** or **Person here**, the CPU level when a CPU
   plays, kid mode; **Start**; **Play with friends** below), Match (the board, a turn banner, a
   CPU's thinking dots; play a move; a result banner at the end; Hint and Undo in kid mode and in
@@ -348,7 +367,7 @@ move or the room says it's back (AC6.6).
 The import rule, checked by a unit test: `rules.js` imports only `site/lib/{rng,deck,board}.js`;
 only `store.js` touches `localStorage`.
 
-**The eleven games** (all `realtime: false`):
+**The twelve games** (all `realtime: false`):
 
 | Game | Type | Players | Notes |
 |---|---|---|---|
@@ -363,6 +382,7 @@ only `store.js` touches `localStorage`.
 | Sudoku | puzzles | 1 | A grid made from the seed with one solution, graded Easy (naked singles), Medium (hidden singles), Hard and Expert (more, fewer givens); notes, repeats in red, a mistakes count. Hint: the next cell a person would find |
 | Crossword | puzzles | 1 | A grid of about 9–12 words built from the seed out of a built-in word bank (Animals, Food, World, Science, Sports, Music, films and books, Words; A mix; Today's: all topics, seeded by the date). Hint: one right letter |
 | Word Tiles | board | 2–4 | The owner's "Scrabble", named generically. A 15 × 15 board with the classic premium squares, 100 tiles (2 blanks), racks of 7. A built-in list of about 63,500 words (SCOWL to size 50, American and British spellings; ENABLE's 2- and 3-letter words), in a trie built on first play; `tools/word-list.mjs` makes it. The largest game: about 250 KB (under 100 KB sent compressed). Hint: the hard CPU's play, put on the board |
+| Word Guess | puzzles | 1 | The owner's "Wordle", named generically. A word of five letters from a topic (Places with cities and countries, Animals, Food, Nature, Home, Sports; A mix; Today's: all topics, seeded by the date); guesses from about 8,700 five-letter words (SCOWL to size 50 and ENABLE) and every topic word. Green, yellow, grey; no limit on guesses. Hint: one right letter in its square |
 
 **Offline.** `site/sw.js` holds the app's version (a unit test keeps it equal to `shipify.json`'s),
 so each release installs a new service worker. It precaches the hub shell into a cache named for
@@ -460,7 +480,8 @@ only add; Cloudflare refuses a rollback across them, so a bad release is fixed f
 `site/games/index.json` lists each game: `id, name, type, players, cpu, ages, teaching, version,
 kb, about, how` (`how`: the 2 to 4 steps of its How to play card), and for a puzzle `pick`
 (`label`, `options` as `[id, name]`, and `daily`: the option seeded by the device's date, so
-every device gets the same puzzle that day). A unit test checks that every folder has an entry, holds only `rules.js` and
+every device gets the same puzzle that day), and may have `tags` (`"words"` marks a word game,
+for the hub's Words filter). A unit test checks that every folder has an entry, holds only `rules.js` and
 `view.js`, and that `kb` matches the folder's size (rounded up).
 
 **The CPU levels.** Wild Jacks' CPU scores each square by the stretches of five it builds and
