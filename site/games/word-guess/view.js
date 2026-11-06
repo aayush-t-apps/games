@@ -114,7 +114,8 @@ export default {
       listening = true;
       // The device's own keyboard types too, while this board is on screen (not in a text field).
       document.addEventListener("keydown", (event) => {
-        if (!current?.box.isConnected || event.ctrlKey || event.metaKey || event.altKey) return;
+        // Only while Word Guess is on the board (the board's box is the next game's too).
+        if (!current?.box.isConnected || !current.box.querySelector(".wg") || event.ctrlKey || event.metaKey || event.altKey) return;
         if (event.target instanceof HTMLElement && event.target.closest("input, textarea, select, dialog")) return;
         const key = event.key === "Enter" ? "+" : event.key === "Backspace" ? "<" : event.key.toLowerCase();
         // Enter on a focused button is that button's own tap.

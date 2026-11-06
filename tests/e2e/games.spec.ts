@@ -59,7 +59,10 @@ test("Wild Jacks: a picked card's squares glow, a tap puts a chip there, and the
   const spot = page.locator(".cl-cell.spot").first();
   await expect(spot).toBeVisible();
   await spot.click();
-  await expect(page.locator("#live")).toHaveText(/^Player played .+ on row \d+, column \d+/);
+  // The moves log keeps the line: the live region may say the CPU's move before it is read.
+  await expect(
+    page.locator("#log li").filter({ hasText: /^Player played .+ on row \d+, column \d+/ }),
+  ).toHaveCount(1);
   await expect(page.locator(".cl-cell[aria-label*='Blue chip']")).toHaveCount(1);
   await expect(page.locator("#live")).toHaveText(/^CPU 1 (played|took|traded)/);
   await expect(turn(page)).toHaveText("Your turn");
@@ -78,7 +81,10 @@ test("Snakes and Ladders: roll two dice, the picks' squares glow, a pick moves t
   await expect(picks.first()).toBeVisible();
   await expect(page.locator(".sl-spot")).toHaveCount(await picks.count());
   await picks.first().click();
-  await expect(page.locator("#live")).toHaveText(/^Player (moved|climbed|slid)/);
+  // The moves log keeps the line: the live region may say the CPU's move before it is read.
+  await expect(
+    page.locator("#log li").filter({ hasText: /^Player (moved|climbed|slid)/ }),
+  ).toHaveCount(1);
   await expect(page.locator(".sl-piece").first()).not.toHaveAttribute("aria-label", /at the start/);
   await expect(page.locator("#live")).toHaveText(/^CPU 1 /);
   await expect(turn(page)).toHaveText("Your turn");
@@ -118,9 +124,9 @@ test("Word Tiles: tiles go on the board, the words and points show, Play sends t
     await expect(page.locator(".wt-score")).toHaveText(/^[A-Z]+(, [A-Z]+)*: \d+ points?$/);
     await page.getByRole("button", { name: /^Play [A-Z]+$/ }).click();
   }
-  await expect(page.locator("#live")).toHaveText(
-    /^Player (played [A-Z]+.* for \d+|swapped|passed)/,
-  );
+  // The moves log keeps the player's line: the live region may say the CPU's move before it is read.
+  const log = page.locator("#log li");
+  await expect(log.filter({ hasText: /^Player (played [A-Z]+.* for \d+|passed)/ })).toHaveCount(1);
   await expect(page.locator("#live")).toHaveText(/^CPU 1 (played|swapped|passed)/);
   await expect(turn(page)).toHaveText("Your turn");
 });
@@ -306,7 +312,10 @@ test("a match plays by keyboard alone, and says each move (AC2.3)", async ({ pag
   for (let i = 0; i < 3; i++) await page.keyboard.press("ArrowRight");
   await expect(page.getByRole("button", { name: /^Column 4/ })).toBeFocused();
   await page.keyboard.press("Enter");
-  await expect(page.locator("#live")).toHaveText("Player dropped a disc in column 4");
+  // The moves log keeps the player's line: the live region may say the CPU's move before it is read.
+  await expect(
+    page.locator("#log li").filter({ hasText: /^Player dropped a disc in column 4$/ }),
+  ).toHaveCount(1);
   await expect(page.locator("#live")).toHaveText(/^CPU 1 dropped a disc/);
   await expect(turn(page)).toHaveText("Your turn");
   await expect(page.locator("#board :focus")).toHaveCount(1);
