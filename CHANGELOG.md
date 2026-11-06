@@ -19,6 +19,11 @@ Versions: [Semantic Versioning](https://semver.org/). Change docs: `docs/changes
 - Filters on the games page: **Players** (Any, 1, 2, 3–4, 5–6) and **Kind** (All, Kids, Words,
   Cards, Board, Puzzles).
 
+### Changed
+
+- Four in a Row's CPU thinks about a third faster, with the same moves: at each depth it tries
+  first the column that last cut its search short.
+
 ## [0.7.0] - 2026-10-31
 
 ### Added
