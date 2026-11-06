@@ -211,5 +211,36 @@
       "Use all seven tiles for 50 more. Stuck? Swap tiles or pass.",
       "It ends when someone uses their last tile and the bag is empty. Most points wins."
     ]
+  },
+  {
+    "id": "word-guess",
+    "name": "Word Guess",
+    "type": "puzzles",
+    "players": [1, 1],
+    "cpu": false,
+    "ages": "7+",
+    "teaching": true,
+    "version": 1,
+    "kb": 58,
+    "about": "Find the hidden word of five letters. Today's word, or pick a topic: Places, Animals, Food and more.",
+    "how": [
+      "Type a word of five letters and tap Enter.",
+      "Green: right letter, right square. Yellow: in the word, another square. Grey: not in the word.",
+      "Keep guessing until you find it. Stuck? Hint shows one right letter."
+    ],
+    "pick": {
+      "label": "Words",
+      "daily": "today",
+      "options": [
+        ["today", "Today's word"],
+        ["mix", "A mix"],
+        ["places", "Places"],
+        ["animals", "Animals"],
+        ["food", "Food"],
+        ["nature", "Nature"],
+        ["home", "Home"],
+        ["sports", "Sports"]
+      ]
+    }
   }
 ]

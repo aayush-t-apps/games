@@ -1,4 +1,5 @@
-// Makes Word Tiles' word list (site/games/word-tiles/rules.js, its last line, `const WORDS`).
+// Makes Word Tiles' word list (site/games/word-tiles/rules.js, its last line, `const WORDS`), and
+// Word Guess's guesses (site/games/word-guess/rules.js, `const GUESSES`).
 // The words: SCOWL's English, American and British words up to size 50 (common words and their
 // forms, http://wordlist.aspell.net), lower case a–z only, 2 to 15 letters, and ENABLE's two- and
 // three-letter words (public domain), the short words a crossword game needs, and FE, KI, OI, QI
@@ -37,7 +38,18 @@ for (const w of [...words].sort()) {
   out += k + w.slice(k);
   prev = w;
 }
-const text = readFileSync(RULES, "utf8");
-const at = text.lastIndexOf("const WORDS = ");
-writeFileSync(RULES, `${text.slice(0, at)}const WORDS = "${out}";\n`);
-console.log(`${words.size} words, ${out.length} characters`);
+/** Put `value` on the last line of a rules file, `const <name> = "…";`. */
+function writeLast(file, name, value) {
+  const text = readFileSync(file, "utf8");
+  const at = text.lastIndexOf(`const ${name} = `);
+  writeFileSync(file, `${text.slice(0, at)}const ${name} = "${value}";\n`);
+}
+writeLast(RULES, "WORDS", out);
+console.log(`Word Tiles: ${words.size} words, ${out.length} characters`);
+
+// Word Guess's guesses: the five-letter words of the same SCOWL words and all of ENABLE's, one
+// after another (each is five letters, so no separator).
+const five = new Set([...words].filter((w) => w.length === 5));
+for (const w of readFileSync(enable, "utf8").split("\n")) if (/^[a-z]{5}$/.test(w.trim())) five.add(w.trim());
+writeLast("site/games/word-guess/rules.js", "GUESSES", [...five].sort().join(""));
+console.log(`Word Guess: ${five.size} guesses`);
