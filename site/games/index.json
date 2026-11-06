@@ -193,5 +193,23 @@
         ["words", "Words"]
       ]
     }
+  },
+  {
+    "id": "word-tiles",
+    "name": "Word Tiles",
+    "type": "board",
+    "players": [2, 4],
+    "cpu": true,
+    "ages": "8+",
+    "teaching": true,
+    "version": 1,
+    "kb": 251,
+    "about": "Make words on the board from your seven letter tiles. Premium squares score more. Most points wins.",
+    "how": [
+      "Tap a tile in your rack, then a square. Make a word in one line, joined to the tiles there.",
+      "The first word covers the star. Every word you make must be a real word; 2L, 3L, 2W, 3W score more.",
+      "Use all seven tiles for 50 more. Stuck? Swap tiles or pass.",
+      "It ends when someone uses their last tile and the bag is empty. Most points wins."
+    ]
   }
 ]

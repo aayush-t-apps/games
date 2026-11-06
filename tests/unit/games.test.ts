@@ -13,6 +13,7 @@ import memory from "../../site/games/memory/rules.js";
 import quizRace from "../../site/games/quiz-race/rules.js";
 import snakesLadders from "../../site/games/snakes-ladders/rules.js";
 import sudoku from "../../site/games/sudoku/rules.js";
+import wordTiles from "../../site/games/word-tiles/rules.js";
 
 type Move = Record<string, unknown>;
 type State = Record<string, unknown> & { turn: number };
@@ -42,6 +43,7 @@ const GAMES = [
   quizRace,
   sudoku,
   crossword,
+  wordTiles,
 ] as Rules[];
 const LEVELS = ["easy", "normal", "hard"];
 const SEEDS = 200;
@@ -181,7 +183,7 @@ describe("the game list (AC1.1)", () => {
   }[];
   const folders = readdirSync(DIR).filter((f) => statSync(join(DIR, f)).isDirectory());
 
-  it("lists the ten games in order, one entry per folder", () => {
+  it("lists the eleven games in order, one entry per folder", () => {
     expect(list.map((g) => g.name)).toEqual([
       "Four in a Row",
       "Wild Jacks",
@@ -193,6 +195,7 @@ describe("the game list (AC1.1)", () => {
       "Memory",
       "Quiz Race",
       "Crossword",
+      "Word Tiles",
     ]);
     expect(list.map((g) => g.id).sort()).toEqual(folders.sort());
   });
