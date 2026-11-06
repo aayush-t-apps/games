@@ -144,6 +144,10 @@ const near = (i, step, dir) => {
   return step === 1 && rowOf(j) !== rowOf(i) ? -1 : j;
 };
 
+// The square after and before each square along a line (-1 off the board): across, then down.
+const NEXT = [1, N].map((step) => Int16Array.from({ length: N * N }, (_, i) => near(i, step, 1)));
+const PREV = [1, N].map((step) => Int16Array.from({ length: N * N }, (_, i) => near(i, step, -1)));
+
 /** The squares of the word through i along `step` on a board, first to last. */
 function span(board, i, step) {
   let a = i;
@@ -235,59 +239,79 @@ const primeOf = (ch) => PRIMES[ch === "?" ? 26 : ch.charCodeAt(0) - 65];
 /**
  * Search every play for a rack on a board. A position can have thousands, so it keeps two kinds:
  * `plays`, the first play found for each score, most points first; and `best`, the play with the
- * most points plus `rate` of the tiles it keeps on the rack (a string, in rack order).
+ * most points plus `rate` of the tiles it keeps on the rack (a string, in rack order). With
+ * `blank` false, the blanks stay on the rack: a blank multiplies the plays to search by 26.
  * @returns {{plays: {tiles: [number, string][], score: number}[], best: {tiles: [number, string][], score: number} | null}}
  */
-export function findPlays(board, rack, rate = () => 0) {
+export function findPlays(board, rack, rate = () => 0, blank = true) {
   const t = dict();
+  const { mask, first, end } = t;
+  // The board as letters 0–25 (-1 for an empty square).
+  const at = new Int8Array(N * N);
+  const worth = new Int8Array(N * N);
+  for (let i = 0; i < N * N; i++) {
+    at[i] = board[i] === "." ? -1 : (board.charCodeAt(i) | 32) - 97;
+    worth[i] = points(board[i]);
+  }
   const counts = new Int8Array(27);
   for (const ch of rack) counts[ch === "?" ? 26 : ch.charCodeAt(0) - 65]++;
-  // One blank a play: both at once give 26 times the plays, for little gain.
-  counts[26] = Math.min(counts[26], 1);
+  // One blank a play at most: both at once give 26 times the plays again, for little gain.
+  counts[26] = blank ? Math.min(counts[26], 1) : 0;
+  // The letters on the rack as bits (bit 0 is A), kept up to date as tiles go down and come back.
+  let have = 0;
+  for (let c = 0; c < 26; c++) if (counts[c]) have |= 1 << c;
   const rackKey = [...rack].reduce((n, ch) => n * primeOf(ch), 1);
   const rated = new Map();
   const byScore = new Map();
-  let best = null;
+  // The best play so far, kept as its squares and codes (made into a play at the end).
   let bestValue = -Infinity;
+  let bestScore = 0;
+  let bestDepth = 0;
+  const bestCells = new Int16Array(RACK);
+  const bestCodes = new Int16Array(RACK);
+  const asTiles = (cells, codes, n) =>
+    Array.from({ length: n }, (_, k) => [cells[k], String.fromCharCode(codes[k] + (codes[k] >= 26 ? 71 : 65))]);
   const empty = !/[A-Za-z]/.test(board);
-  for (const step of [1, N]) {
-    const cross = step === 1 ? N : 1;
+  for (let d = 0; d < 2; d++) {
+    const [step, next, back, below, above] = [d ? N : 1, NEXT[d], PREV[d], NEXT[1 - d], PREV[1 - d]];
     // For each empty square: the letters the word across the line allows, and that word's points.
     const allow = new Int32Array(N * N);
     const crossSum = new Int16Array(N * N).fill(-1);
     const anchor = new Uint8Array(N * N);
+    const tile = (j) => j >= 0 && at[j] >= 0;
     for (let i = 0; i < N * N; i++) {
-      if (filled(board, i)) continue;
-      const a = near(i, cross, -1);
-      const b = near(i, cross, 1);
-      const before = a >= 0 && filled(board, a);
-      const afterIt = b >= 0 && filled(board, b);
-      const along = [near(i, step, -1), near(i, step, 1)].some((j) => j >= 0 && filled(board, j));
-      anchor[i] = before || afterIt || along || (empty && i === CENTRE) ? 1 : 0;
-      if (!before && !afterIt) {
+      if (at[i] >= 0) continue;
+      const a = above[i];
+      const b = below[i];
+      const crossed = tile(a) || tile(b);
+      anchor[i] = crossed || tile(back[i]) || tile(next[i]) || (empty && i === CENTRE) ? 1 : 0;
+      if (!crossed) {
         allow[i] = ALL;
         continue;
       }
-      let up = "";
-      for (let j = a; j >= 0 && filled(board, j); j = near(j, cross, -1)) up = board[j] + up;
-      let down = "";
-      for (let j = b; j >= 0 && filled(board, j); j = near(j, cross, 1)) down += board[j];
+      // The word across: the tiles above square i, then a letter on it, then the tiles below.
+      let top = i;
+      while (tile(above[top])) top = above[top];
+      let n = 0;
       let sum = 0;
-      for (const ch of up + down) sum += points(ch);
+      for (let j = top; j !== i; j = below[j]) {
+        if (n >= 0) n = child(t, n, at[j]);
+        sum += worth[j];
+      }
+      for (let j = b; tile(j); j = below[j]) sum += worth[j];
       crossSum[i] = sum;
-      const n = walk(t, 0, up);
       if (n < 0) continue;
       let m = 0;
-      for (let c = 0; c < 26; c++) {
-        const k = child(t, n, c);
-        if (k < 0) continue;
-        const e = walk(t, k, down);
-        if (e >= 0 && t.end[e]) m |= 1 << c;
+      for (let go = mask[n]; go; go &= go - 1) {
+        const c = 31 - Math.clz32(go & -go);
+        let k = child(t, n, c);
+        for (let j = b; k >= 0 && tile(j); j = below[j]) k = child(t, k, at[j]);
+        if (k >= 0 && end[k]) m |= 1 << c;
       }
       allow[i] = m;
     }
 
-    // The tiles put down so far (square, letter code; a blank's in lower case), and the points
+    // The tiles put down so far (square, letter code: 0–25, or 26–51 for a blank), and the points
     // each added: to the main word's letters, its multiplier and the words across it.
     let depth = 0;
     const cellAt = new Int16Array(RACK);
@@ -298,129 +322,152 @@ export function findPlays(board, rack, rate = () => 0) {
     let times = 1;
     let crossTotal = 0;
     let used = 1;
-    const put = (i, c, blank) => {
-      const p = blank ? 0 : VALUES[c] * LX[i];
+    // Put a tile on square i (code: a letter 0–25, or 26–51 for the blank as that letter); take()
+    // takes the last one back. The callers take the tile off the rack and put it back.
+    const put = (i, code) => {
+      const p = code < 26 ? VALUES[code] * LX[i] : 0;
       const x = crossSum[i] >= 0 ? (crossSum[i] + p) * WX[i] : 0;
       cellAt[depth] = i;
-      codeAt[depth] = (blank ? 97 : 65) + c;
+      codeAt[depth] = code;
       addSum[depth] = p;
       addCross[depth] = x;
       depth++;
       sum += p;
       times *= WX[i];
       crossTotal += x;
-      used *= PRIMES[blank ? 26 : c];
+      used *= PRIMES[code < 26 ? code : 26];
     };
     const take = () => {
       depth--;
+      const code = codeAt[depth];
       sum -= addSum[depth];
       times /= WX[cellAt[depth]];
       crossTotal -= addCross[depth];
-      used /= PRIMES[codeAt[depth] >= 97 ? 26 : codeAt[depth] - 65];
+      used /= PRIMES[code < 26 ? code : 26];
     };
-    const tiles = () => Array.from({ length: depth }, (_, k) => [cellAt[k], String.fromCharCode(codeAt[k])]);
     const record = () => {
       // One tile that makes a word both ways: found across already.
       if (step === N && depth === 1 && crossSum[cellAt[0]] >= 0) return;
       const score = sum * times + crossTotal + (depth === RACK ? BINGO : 0);
-      if (!byScore.has(score)) byScore.set(score, { tiles: tiles(), score });
+      if (!byScore.has(score)) byScore.set(score, { tiles: asTiles(cellAt, codeAt, depth), score });
       const key = rackKey / used;
       let value = rated.get(key);
       if (value === undefined) {
         let left = rack;
-        for (let k = 0; k < depth; k++) left = left.replace(codeAt[k] >= 97 ? "?" : String.fromCharCode(codeAt[k]), "");
+        for (let k = 0; k < depth; k++) left = left.replace(codeAt[k] >= 26 ? "?" : String.fromCharCode(codeAt[k] + 65), "");
         value = rate(left);
         rated.set(key, value);
       }
       if (score + value > bestValue) {
         bestValue = score + value;
-        best = { tiles: tiles(), score };
+        bestScore = score;
+        bestDepth = depth;
+        bestCells.set(cellAt);
+        bestCodes.set(codeAt);
       }
     };
 
     // Go on from node n at square i (or the end of the line, i = -1); `length` letters so far.
     const extend = (n, i, length, started) => {
-      if (i < 0 || !filled(board, i)) {
-        if (started && length > 1 && t.end[n]) record();
+      if (i < 0 || at[i] < 0) {
+        if (started && length > 1 && end[n]) record();
         if (i < 0) return;
-        const m = t.mask[n];
-        const go = m & allow[i];
-        if (!go) return;
-        const after = near(i, step, 1);
-        // A node's children are stored in letter order from first[n].
-        let k = t.first[n];
-        for (let c = 0; c < 26; c++) {
-          if (!((m >>> c) & 1)) continue;
-          const kid = k++;
-          if (!((go >>> c) & 1)) continue;
+        // Only letters the word can go on with, that the square allows and the rack holds.
+        const m = mask[n];
+        let go = m & allow[i] & (counts[26] > 0 ? ALL : have);
+        // This loop runs the most, so it puts the tile down and takes it back itself.
+        while (go) {
+          const low = go & -go;
+          go ^= low;
+          const c = 31 - Math.clz32(low);
           const own = counts[c] > 0;
-          if (!own && counts[26] === 0) continue;
-          counts[own ? c : 26]--;
-          put(i, c, !own);
-          extend(kid, after, length + 1, true);
-          take();
-          counts[own ? c : 26]++;
+          if (!own) counts[26]--;
+          else if (--counts[c] === 0) have ^= low;
+          const p = own ? VALUES[c] * LX[i] : 0;
+          const x = crossSum[i] >= 0 ? (crossSum[i] + p) * WX[i] : 0;
+          const prime = PRIMES[own ? c : 26];
+          cellAt[depth] = i;
+          codeAt[depth] = own ? c : c + 26;
+          depth++;
+          sum += p;
+          times *= WX[i];
+          crossTotal += x;
+          used *= prime;
+          // A node's children are stored in letter order from first[n].
+          extend(first[n] + bits(m & (low - 1)), next[i], length + 1, true);
+          depth--;
+          sum -= p;
+          times /= WX[i];
+          crossTotal -= x;
+          used /= prime;
+          if (!own) counts[26]++;
+          else if (counts[c]++ === 0) have |= low;
         }
         return;
       }
-      const k = child(t, n, (board.charCodeAt(i) | 32) - 97);
-      if (k < 0) return;
-      sum += points(board[i]);
-      extend(k, near(i, step, 1), length + 1, started);
-      sum -= points(board[i]);
+      const m = mask[n];
+      const low = 1 << at[i];
+      if (!(m & low)) return;
+      const p = points(board[i]);
+      sum += p;
+      extend(first[n] + bits(m & (low - 1)), next[i], length + 1, started);
+      sum -= p;
     };
 
-    // Letters before the anchor, on empty squares that aren't anchors: none of them has a word
-    // across it, so any letter goes.
-    // `word` holds the letters so far, 0–25, or 26–51 for a blank.
-    const left = (n, anchorAt, room, word) => {
-      // Go on through the anchor only when a letter can go there after these.
-      if (t.mask[n] & allow[anchorAt]) {
+    // Letters before the anchor, on the empty squares before it that aren't anchors: none of them
+    // has a word across it, so any letter goes. `word` holds them (codes, as for put), already
+    // off the rack; they go on the board only when a letter can follow them on the anchor.
+    const lead = (n, anchorAt, room, word) => {
+      const m = mask[n];
+      const avail = counts[26] > 0 ? ALL : have;
+      if (m & allow[anchorAt] & avail) {
         const start = anchorAt - word.length * step;
-        for (let k = 0; k < word.length; k++) put(start + k * step, word[k] % 26, word[k] >= 26);
+        for (let k = 0; k < word.length; k++) put(start + k * step, word[k]);
         extend(n, anchorAt, word.length, false);
         for (let k = 0; k < word.length; k++) take();
       }
       if (room === 0) return;
-      const m = t.mask[n];
-      let k = t.first[n];
-      for (let c = 0; c < 26; c++) {
-        if (!((m >>> c) & 1)) continue;
-        const kid = k++;
+      let go = m & avail;
+      while (go) {
+        const low = go & -go;
+        go ^= low;
+        const c = 31 - Math.clz32(low);
         const own = counts[c] > 0;
-        if (!own && counts[26] === 0) continue;
-        counts[own ? c : 26]--;
+        if (!own) counts[26]--;
+        else if (--counts[c] === 0) have ^= low;
         word.push(own ? c : c + 26);
-        left(kid, anchorAt, room - 1, word);
+        lead(first[n] + bits(m & (low - 1)), anchorAt, room - 1, word);
         word.pop();
-        counts[own ? c : 26]++;
+        if (!own) counts[26]++;
+        else if (counts[c]++ === 0) have |= low;
       }
     };
 
     for (let i = 0; i < N * N; i++) {
-      if (!anchor[i] || filled(board, i)) continue;
-      const before = near(i, step, -1);
-      if (before >= 0 && filled(board, before)) {
+      if (!anchor[i] || at[i] >= 0) continue;
+      if (tile(back[i])) {
         // The letters already there before the anchor start the word.
-        let j = before;
-        let prefix = "";
+        let start = back[i];
+        while (tile(back[start])) start = back[start];
+        let n = 0;
         let p = 0;
-        for (; j >= 0 && filled(board, j); j = near(j, step, -1)) {
-          prefix = board[j] + prefix;
-          p += points(board[j]);
+        let length = 0;
+        for (let j = start; j !== i && n >= 0; j = next[j], length++) {
+          n = child(t, n, at[j]);
+          p += worth[j];
         }
-        const n = walk(t, 0, prefix);
         if (n < 0) continue;
         sum += p;
-        extend(n, i, prefix.length, false);
+        extend(n, i, length, false);
         sum -= p;
         continue;
       }
       let room = 0;
-      for (let j = before; j >= 0 && !filled(board, j) && !anchor[j]; j = near(j, step, -1)) room++;
-      left(0, i, Math.min(room, RACK - 1), []);
+      for (let j = back[i]; j >= 0 && at[j] < 0 && !anchor[j] && room < RACK - 1; j = back[j]) room++;
+      lead(0, i, room, []);
     }
   }
+  const best = bestDepth ? { tiles: asTiles(bestCells, bestCodes, bestDepth), score: bestScore } : null;
   return { plays: [...byScore.values()].sort((a, b) => b.score - a.score), best };
 }
 
@@ -430,17 +477,24 @@ const KEEP = { "?": 25, S: 8, E: 3, X: 3, Z: 3, R: 1.5, A: 1, H: 1, N: 1, T: 1, 
 const AWAY = { Q: -7, V: -5, J: -3, U: -3, W: -3, I: -1, O: -1, B: -1, G: -1, F: -1, K: -1, Y: -1, P: -0.5 };
 const VOWELS = "AEIOU";
 
+const worthOf = new Map();
 function leaveWorth(rack) {
-  let v = 0;
+  let v = worthOf.get(rack);
+  if (v !== undefined) return v;
+  v = 0;
   let vowels = 0;
-  const seen = {};
-  for (const ch of rack) {
+  for (let k = 0; k < rack.length; k++) {
+    const ch = rack[k];
     v += KEEP[ch] ?? AWAY[ch] ?? 0;
     if (VOWELS.includes(ch)) vowels++;
-    seen[ch] = (seen[ch] ?? 0) + 1;
-    if (seen[ch] > 1 && ch !== "?") v -= 3;
+    // A rack is in order, so two of a letter sit side by side.
+    if (ch === rack[k - 1] && ch !== "?") v -= 3;
   }
-  return v - 2 * Math.abs(vowels - (rack.length - vowels) * 0.7);
+  v -= 2 * Math.abs(vowels - (rack.length - vowels) * 0.7);
+  // Racks repeat from turn to turn; a few thousand kept at most.
+  if (worthOf.size > 5000) worthOf.clear();
+  worthOf.set(rack, v);
+  return v;
 }
 
 const SAMPLE = 12;
@@ -452,7 +506,11 @@ function options(s) {
   if (o) return o;
   // At the end, with the bag empty, what is left on the rack counts against you.
   const rate = s.bag.length ? leaveWorth : (left) => -2 * rackPoints(left);
-  const { plays, best } = findPlays(s.board, s.racks[s.turn], rate);
+  // The CPU keeps its blanks for when it has no other play: searching with one is slow on a phone.
+  const rack = s.racks[s.turn];
+  let found = findPlays(s.board, rack, rate, false);
+  if (!found.plays.length && rack.includes("?")) found = findPlays(s.board, rack, rate, true);
+  const { plays, best } = found;
   // A spread of scores, best first: the easy CPU picks among them.
   const n = Math.min(SAMPLE, plays.length);
   const sample = Array.from({ length: n }, (_, k) => plays[Math.floor((k * plays.length) / n)]);

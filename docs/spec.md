@@ -362,7 +362,7 @@ only `store.js` touches `localStorage`.
 | Quiz Race | kids | 1–4 | Answer a question (maths made from the seed, or a short JSON pack of kids' facts); right moves you a step on a 10-step track; first home wins. CPU right by level (60, 80, 95 %) |
 | Sudoku | puzzles | 1 | A grid made from the seed with one solution, graded Easy (naked singles), Medium (hidden singles), Hard and Expert (more, fewer givens); notes, repeats in red, a mistakes count. Hint: the next cell a person would find |
 | Crossword | puzzles | 1 | A grid of about 9–12 words built from the seed out of a built-in word bank (Animals, Food, World, Science, Sports, Music, films and books, Words; A mix; Today's: all topics, seeded by the date). Hint: one right letter |
-| Word Tiles | board | 2–4 | The owner's "Scrabble", named generically. A 15 × 15 board with the classic premium squares, 100 tiles (2 blanks), racks of 7. A built-in list of about 63,500 words (SCOWL to size 50, American and British spellings; ENABLE's 2- and 3-letter words), in a trie built on first play; `tools/word-list.mjs` makes it. The largest game: about 250 KB (about 90 KB sent compressed). Hint: the hard CPU's play, put on the board |
+| Word Tiles | board | 2–4 | The owner's "Scrabble", named generically. A 15 × 15 board with the classic premium squares, 100 tiles (2 blanks), racks of 7. A built-in list of about 63,500 words (SCOWL to size 50, American and British spellings; ENABLE's 2- and 3-letter words), in a trie built on first play; `tools/word-list.mjs` makes it. The largest game: about 250 KB (under 100 KB sent compressed). Hint: the hard CPU's play, put on the board |
 
 **Offline.** `site/sw.js` holds the app's version (a unit test keeps it equal to `shipify.json`'s),
 so each release installs a new service worker. It precaches the hub shell into a cache named for
@@ -469,7 +469,7 @@ a stretch where another colour has three, and keeps its jacks longer. Four in a 
 remembers each card it saw with a 35, 70 or 95 % chance. Quiz Race's CPU is right 60, 80 or 95
 times in 100. Snakes and Ladders' CPU picks at random (easy), the pick that ends highest
 (normal), or the one whose next roll looks best on average (hard). Word Tiles' CPU finds every
-play for its rack (Appel and Jacobson's way, one blank a play) and takes one of a spread of
+play for its rack (Appel and Jacobson's way; it keeps its blanks until it has no other play) and takes one of a spread of
 scores (easy), the most points (normal), or the most points plus what the tiles it keeps are
 worth next turn (hard: a blank or an S kept is good, a Q or two of a letter bad). The card games and Ludo use
 simple rules that get smarter by level.

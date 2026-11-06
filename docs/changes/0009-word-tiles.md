@@ -52,7 +52,7 @@ classic game, named generically (no trade names, as for Four in a Row and Wild J
 
 - **A full tournament word list (about 170,000 to 280,000 words):** 1.7 MB or more, and many
   words nobody at a family table knows. SCOWL to size 50 (common words and their forms, American
-  and British spellings, about 63,500 words, 220 KB) keeps the game near 90 KB sent compressed.
+  and British spellings, about 63,500 words, 220 KB) keeps the game under 100 KB sent compressed.
   The short words a crossword game needs (ENABLE's 2- and 3-letter words, and QI, ZA, KI, OI, FE)
   are added.
 - **The word list as a third file in the game's folder, fetched on first play:** it changes the
@@ -85,12 +85,13 @@ classic game, named generically (no trade names, as for Four in a Row and Wild J
   arrays on first use (about 180 ms once, on the test box). `tools/word-list.mjs` makes it from
   SCOWL and ENABLE; the SCOWL notice is in the file's header.
 - The CPU finds plays from each anchor square with the rack, checking the letters each square
-  allows across the line (Appel and Jacobson), with one blank a play. It keeps the first play for
-  each score and the best play by points plus the worth of the kept tiles. Easy picks one of 12
-  scores spread from best to worst; normal the most points; hard adds the kept tiles' worth (with
-  the bag empty, the points left on the rack count against it). Normal beat easy in 40 of 40
-  two-player matches, hard beat normal in 28 of 40. A CPU move takes about 4 ms on average and
-  under 75 ms at worst on the test box.
+  allows across the line (Appel and Jacobson). It keeps its blanks for when it has no other play
+  (a blank makes the search about 26 times larger), and then uses one a play. It keeps the first
+  play for each score and the best play by points plus the worth of the kept tiles. Easy picks one
+  of 12 scores spread from best to worst; normal the most points; hard adds the kept tiles' worth
+  (with the bag empty, the points left on the rack count against it). Normal beat easy in 40 of
+  40 two-player matches, hard beat normal in 24 of 40. A CPU move takes about 2–3 ms on average
+  and under 50 ms at worst on the test box (about twice that under the tests' coverage count).
 
 ## Rollout and rollback
 

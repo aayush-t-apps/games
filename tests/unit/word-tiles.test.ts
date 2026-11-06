@@ -318,7 +318,9 @@ describe("Word Tiles", () => {
     expect(rules.ai({ ...stuck, bag: "" }, 0, "hard")).toEqual({ t: "pass" });
   });
 
-  it("plays better by level: normal beats easy, hard beats normal more often than not", () => {
+  it("plays better by level: normal beats easy, hard beats normal more often than not", {
+    timeout: 30_000,
+  }, () => {
     const match = (levels: string[], seed: number) => {
       let s = rules.init(2, seed);
       while (!rules.winner(s))
