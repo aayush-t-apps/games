@@ -5,6 +5,25 @@ Versions: [Semantic Versioning](https://semver.org/). Change docs: `docs/changes
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-06
+
+### Added
+
+- Word Tiles, a crossword game for 2 to 4 players: put letter tiles from your rack on a 15 × 15
+  board with premium squares, see the words and points as you go, swap or pass; a built-in list
+  of about 63,500 common words (American and British spellings). CPU on easy, normal and hard,
+  pass-and-play and online rooms (docs/changes/0009-word-tiles.md).
+- Word Guess, a puzzle: find a word of five letters from green, yellow and grey clues. Today's
+  word, a mix, or a topic: Places (cities and countries too), Animals, Food, Nature, Home or
+  Sports. Hint shows one right letter (docs/changes/0010-word-guess-and-filters.md).
+- Filters on the games page: **Players** (Any, 1, 2, 3–4, 5–6) and **Kind** (All, Kids, Words,
+  Cards, Board, Puzzles).
+
+### Changed
+
+- Four in a Row's CPU thinks about a third faster, with the same moves: at each depth it tries
+  first the column that last cut its search short.
+
 ## [0.7.0] - 2026-10-31
 
 ### Added

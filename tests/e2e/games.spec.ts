@@ -12,6 +12,8 @@ const GAMES = [
   "Memory",
   "Quiz Race",
   "Crossword",
+  "Word Tiles",
+  "Word Guess",
 ];
 
 async function open(page: Page) {
@@ -25,11 +27,20 @@ async function setup(page: Page, game: string) {
   await expect(page.getByRole("heading", { level: 1, name: game })).toBeVisible();
 }
 
+// Start loads the game's files the first time ("Getting …"): on a busy box that can take longer
+// than an expect's 5 s, so wait for it to end before the game's own checks.
+async function start(page: Page) {
+  await page.getByRole("button", { name: "Start" }).click();
+  await expect(page.locator("p.loading")).toHaveCount(0, { timeout: 15_000 });
+}
+
 const turn = (page: Page) => page.locator("#turn");
 const freeColumn = (page: Page) =>
   page.getByRole("button", { name: /^Column \d, \d free$/ }).first();
 
-test("the hub lists the ten games with their type, players and ages (AC1.1)", async ({ page }) => {
+test("the hub lists the twelve games with their type, players and ages (AC1.1)", async ({
+  page,
+}) => {
   await open(page);
   const boxes = page.locator(".shelf > li");
   await expect(boxes.locator("h2")).toHaveText(GAMES);
@@ -45,7 +56,7 @@ test("Wild Jacks: a picked card's squares glow, a tap puts a chip there, and the
 }) => {
   await open(page);
   await setup(page, "Wild Jacks");
-  await page.getByRole("button", { name: "Start" }).click();
+  await start(page);
   await expect(page.locator("#board .cl-cell")).toHaveCount(100);
   await expect(turn(page)).toHaveText("Your turn");
   // A card that isn't a jack: its open squares glow, and a tap on one plays it.
@@ -55,7 +66,10 @@ test("Wild Jacks: a picked card's squares glow, a tap puts a chip there, and the
   const spot = page.locator(".cl-cell.spot").first();
   await expect(spot).toBeVisible();
   await spot.click();
-  await expect(page.locator("#live")).toHaveText(/^Player played .+ on row \d+, column \d+/);
+  // The moves log keeps the line: the live region may say the CPU's move before it is read.
+  await expect(
+    page.locator("#log li").filter({ hasText: /^Player played .+ on row \d+, column \d+/ }),
+  ).toHaveCount(1);
   await expect(page.locator(".cl-cell[aria-label*='Blue chip']")).toHaveCount(1);
   await expect(page.locator("#live")).toHaveText(/^CPU 1 (played|took|traded)/);
   await expect(turn(page)).toHaveText("Your turn");
@@ -66,7 +80,7 @@ test("Snakes and Ladders: roll two dice, the picks' squares glow, a pick moves t
 }) => {
   await open(page);
   await setup(page, "Snakes and Ladders");
-  await page.getByRole("button", { name: "Start" }).click();
+  await start(page);
   await expect(turn(page)).toHaveText("Your turn");
   await page.getByRole("button", { name: "Roll the dice" }).click();
   // From the start every pick fits: one die, the other, or both added (one or two picks).
@@ -74,10 +88,111 @@ test("Snakes and Ladders: roll two dice, the picks' squares glow, a pick moves t
   await expect(picks.first()).toBeVisible();
   await expect(page.locator(".sl-spot")).toHaveCount(await picks.count());
   await picks.first().click();
-  await expect(page.locator("#live")).toHaveText(/^Player (moved|climbed|slid)/);
+  // The moves log keeps the line: the live region may say the CPU's move before it is read.
+  await expect(
+    page.locator("#log li").filter({ hasText: /^Player (moved|climbed|slid)/ }),
+  ).toHaveCount(1);
   await expect(page.locator(".sl-piece").first()).not.toHaveAttribute("aria-label", /at the start/);
   await expect(page.locator("#live")).toHaveText(/^CPU 1 /);
   await expect(turn(page)).toHaveText("Your turn");
+});
+
+test("Word Tiles: tiles go on the board, the words and points show, Play sends them (change 0009)", async ({
+  page,
+}) => {
+  await open(page);
+  await setup(page, "Word Tiles");
+  await page.getByLabel(/^Kid mode/).check();
+  await start(page);
+  await expect(page.locator("#board .wt-cell")).toHaveCount(225);
+  await expect(turn(page)).toHaveText("Your turn");
+  // Kid mode: the centre star glows, the only square a first word can cover.
+  await expect(page.locator(".wt-cell.legal")).toHaveCount(1);
+  await expect(page.locator(".wt-rack button")).toHaveCount(7);
+  // A tile and a square off the centre: the reason shows, and Play waits.
+  const firstTile = page.locator(".wt-rack button").first();
+  await firstTile.click();
+  await expect(firstTile).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: /^row 1, column 2:/ }).click();
+  const letter = page.locator(".wt-letters button").first();
+  if (await letter.isVisible()) await letter.click();
+  await expect(page.locator(".wt-score")).toHaveText("The first word must cover the centre star.");
+  await expect(page.locator(".wt-rack button")).toHaveCount(6);
+  await expect(page.getByRole("button", { name: "Play", exact: true })).toBeDisabled();
+  await page.getByRole("button", { name: "Take back" }).click();
+  await expect(page.locator(".wt-rack button")).toHaveCount(7);
+  // The hint puts a word on the board (rarely, no word fits: it says swap, and we pass); Play
+  // sends it, and the CPU plays.
+  await page.getByRole("button", { name: "Hint" }).click();
+  await expect(page.locator("#msg")).toHaveText(/^(Try [A-Z]+ for \d+|Swap)/);
+  if ((await page.locator(".wt-tile.new").count()) === 0)
+    await page.getByRole("button", { name: "Pass" }).click();
+  else {
+    await expect(page.locator(".wt-score")).toHaveText(/^[A-Z]+(, [A-Z]+)*: \d+ points?$/);
+    await page.getByRole("button", { name: /^Play [A-Z]+$/ }).click();
+  }
+  // The moves log keeps the player's line: the live region may say the CPU's move before it is read.
+  const log = page.locator("#log li");
+  await expect(log.filter({ hasText: /^Player (played [A-Z]+.* for \d+|passed)/ })).toHaveCount(1);
+  await expect(page.locator("#live")).toHaveText(/^CPU 1 (played|swapped|passed)/);
+  await expect(turn(page)).toHaveText("Your turn");
+});
+
+test("Word Guess: pick a topic, type a word, see its colours, and Hint shows a letter (change 0009)", async ({
+  page,
+}) => {
+  await open(page);
+  await setup(page, "Word Guess");
+  await expect(page.getByRole("radio", { name: "Today's word" })).toBeChecked();
+  await page.getByRole("radio", { name: "Places" }).check();
+  await start(page);
+  await expect(page.locator(".wg-topic")).toHaveText("Places: a word of five letters");
+  await expect(page.locator(".wg-row")).toHaveCount(6);
+  // Too short: it says so. Then the screen's keys and the device's keyboard both type.
+  for (const k of ["s", "l"])
+    await page.getByRole("button", { name: k.toUpperCase(), exact: true }).click();
+  await page.getByRole("button", { name: "Enter" }).click();
+  await expect(page.locator("#msg")).toHaveText("Type five letters, then Enter.");
+  await page.keyboard.type("ate");
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#live")).toHaveText(/^Player (tried|found) SLATE/);
+  await expect(
+    page.locator(".wg-row").first().locator(".wg-cell.g, .wg-cell.y, .wg-cell.n"),
+  ).toHaveCount(5);
+  // A word that isn't one: refused, with the reason.
+  await page.keyboard.type("xqzzy");
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#msg")).toHaveText("XQZZY isn't in the word list.");
+  await page.getByRole("button", { name: "Hint" }).click();
+  await expect(page.locator("#live")).toHaveText(/^Player took a hint: letter \d is [A-Z]/);
+});
+
+test("the hub's filters show the games for that many players and that kind", async ({ page }) => {
+  await open(page);
+  const shown = page.locator(".shelf > li:not([hidden]) h2");
+  await page.getByRole("button", { name: "Kind: Words" }).click();
+  await expect(shown).toHaveText(["Crossword", "Word Tiles", "Word Guess"]);
+  await page.getByRole("button", { name: "Players: 2" }).click();
+  await expect(shown).toHaveText(["Word Tiles"]);
+  await page.getByRole("button", { name: "Kind: Kids" }).click();
+  await expect(shown).toHaveText([
+    "Four in a Row",
+    "Ludo",
+    "Snakes and Ladders",
+    "Go Fish",
+    "Memory",
+    "Quiz Race",
+  ]);
+  await expect(page.getByRole("button", { name: "Kind: Kids" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.getByRole("button", { name: "Players: 5–6" }).click();
+  await expect(shown).toHaveText(["Go Fish"]);
+  await page.getByRole("button", { name: "Kind: Puzzles" }).click();
+  await expect(shown).toHaveCount(0);
+  await page.getByRole("button", { name: "Show all games" }).click();
+  await expect(shown).toHaveCount(GAMES.length);
 });
 
 test("Back goes one screen back, asks before it leaves a match, and stays in the app (AC10.1)", async ({
@@ -85,7 +200,7 @@ test("Back goes one screen back, asks before it leaves a match, and stays in the
 }) => {
   await open(page);
   await setup(page, "Four in a Row");
-  await page.getByRole("button", { name: "Start" }).click();
+  await start(page);
   await expect(turn(page)).toHaveText("Your turn");
   // No: the match stays.
   page.once("dialog", (d) => d.dismiss());
@@ -112,7 +227,7 @@ test("Sudoku: pick a difficulty, place a number, and Hint shows a right step (ch
   await expect(page.getByRole("radio")).toHaveCount(4);
   await page.getByRole("radio", { name: "Expert" }).check();
   await expect(page.getByLabel(/^Kid mode/)).toHaveCount(0);
-  await page.getByRole("button", { name: "Start" }).click();
+  await start(page);
   await expect(page.locator("#board [data-x]")).toHaveCount(81);
   await page.getByRole("button", { name: "Hint" }).click();
   await expect(page.locator("#msg")).toHaveText(/^Try a \d in row \d, column \d\.$/);
@@ -125,7 +240,7 @@ test("Crossword: today's puzzle shows its clue, and Hint gives a letter (change 
   await open(page);
   await setup(page, "Crossword");
   await expect(page.getByRole("radio", { name: "Today's puzzle" })).toBeChecked();
-  await page.getByRole("button", { name: "Start" }).click();
+  await start(page);
   await expect(page.locator("#board [data-x]").first()).toBeVisible();
   await page.getByRole("button", { name: "Hint" }).click();
   await expect(page.locator("#msg")).toHaveText(/Across|Down/);
@@ -141,7 +256,7 @@ test("Four in a Row plays to the end against the CPU and counts the score (AC1.2
   const how = page.locator("details.how");
   await expect(how).toHaveAttribute("open");
   await expect(how.locator("li").first()).toHaveText("Tap a column to drop your disc into it.");
-  await page.getByRole("button", { name: "Start" }).click();
+  await start(page);
   // A banner says whose turn it is, and a CPU shows that it is thinking (AC1.6, AC1.7).
   await expect(page.locator(".banner")).toHaveText("Your turn");
   await freeColumn(page).click();
@@ -170,7 +285,7 @@ test("Go Fish pass-and-play covers the screen between players (AC2.1, AC2.2)", a
   await page.getByLabel("You", { exact: true }).fill("Ana");
   await page.getByRole("button", { name: "Person here" }).click();
   await page.getByLabel("Player 2").fill("Sam");
-  await page.getByRole("button", { name: "Start" }).click();
+  await start(page);
 
   await expect(page.getByRole("dialog", { name: "Pass to Ana" })).toBeVisible();
   await expect(page.locator(".card-btn")).toHaveCount(0);
@@ -193,7 +308,7 @@ test("a match plays by keyboard alone, and says each move (AC2.3)", async ({ pag
   test.skip(info.project.name !== "desktop", "keyboard play is checked on desktop");
   await open(page);
   await setup(page, "Four in a Row");
-  await page.getByRole("button", { name: "Start" }).click();
+  await start(page);
   await expect(turn(page)).toHaveText("Your turn");
   for (let i = 0; i < 10; i++) {
     const key = await page.evaluate(() => (document.activeElement as HTMLElement).dataset.key);
@@ -204,7 +319,10 @@ test("a match plays by keyboard alone, and says each move (AC2.3)", async ({ pag
   for (let i = 0; i < 3; i++) await page.keyboard.press("ArrowRight");
   await expect(page.getByRole("button", { name: /^Column 4/ })).toBeFocused();
   await page.keyboard.press("Enter");
-  await expect(page.locator("#live")).toHaveText("Player dropped a disc in column 4");
+  // The moves log keeps the player's line: the live region may say the CPU's move before it is read.
+  await expect(
+    page.locator("#log li").filter({ hasText: /^Player dropped a disc in column 4$/ }),
+  ).toHaveCount(1);
   await expect(page.locator("#live")).toHaveText(/^CPU 1 dropped a disc/);
   await expect(turn(page)).toHaveText("Your turn");
   await expect(page.locator("#board :focus")).toHaveCount(1);
@@ -231,7 +349,7 @@ test("plays offline after Download all (AC3.1, AC3.2)", async ({ page, context }
   await expect(plays).toHaveCount(GAMES.length);
   for (const play of await plays.all()) await expect(play).toBeEnabled();
   await setup(page, "Memory");
-  await page.getByRole("button", { name: "Start" }).click();
+  await start(page);
   await page.getByRole("button", { name: "Card 1, face down" }).click();
   await expect(page.getByRole("button", { name: /^Card 1, (?!face down)/ })).toBeVisible();
   await context.setOffline(false);
@@ -243,7 +361,7 @@ test("kid mode highlights moves, gives a hint and takes a move back (AC4.1)", as
   await page.getByLabel(/^Kid mode/).check();
   await expect(page.getByRole("radio")).toHaveCount(1);
   await expect(page.getByRole("radio", { name: "Easy" })).toBeChecked();
-  await page.getByRole("button", { name: "Start" }).click();
+  await start(page);
   await expect(turn(page)).toHaveText("Your turn");
   await expect(page.locator(".col.legal")).toHaveCount(7);
 
@@ -279,7 +397,7 @@ test("the name typed on Setup is kept for next time", async ({ page }) => {
   await open(page);
   await setup(page, "Memory");
   await page.getByLabel("You", { exact: true }).fill("Sam");
-  await page.getByRole("button", { name: "Start" }).click();
+  await start(page);
   await expect(page.locator("#board")).toBeVisible();
   // A reload isn't kept as a match: it opens that game's Setup (AC10.1).
   await page.reload();
@@ -320,7 +438,7 @@ test("a resize changes the layout and keeps the match going (AC3.5)", async ({ p
   await open(page);
   await expect(page.locator("body")).toHaveAttribute("data-layout", "compact");
   await setup(page, "Four in a Row");
-  await page.getByRole("button", { name: "Start" }).click();
+  await start(page);
   await page.getByRole("button", { name: "Column 1, 6 free" }).click();
   await expect(turn(page)).toHaveText("Your turn");
   await page.setViewportSize({ width: 1024, height: 700 });

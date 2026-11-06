@@ -8,7 +8,7 @@
     "ages": "5+",
     "teaching": true,
     "version": 1,
-    "kb": 7,
+    "kb": 8,
     "about": "Drop discs in turn. Make a line of four across, up or on a slant.",
     "how": [
       "Tap a column to drop your disc into it.",
@@ -166,6 +166,7 @@
     "id": "crossword",
     "name": "Crossword",
     "type": "puzzles",
+    "tags": ["words"],
     "players": [1, 1],
     "cpu": false,
     "ages": "8+",
@@ -191,6 +192,57 @@
         ["sports", "Sports"],
         ["arts", "Music, films and books"],
         ["words", "Words"]
+      ]
+    }
+  },
+  {
+    "id": "word-tiles",
+    "name": "Word Tiles",
+    "type": "board",
+    "tags": ["words"],
+    "players": [2, 4],
+    "cpu": true,
+    "ages": "8+",
+    "teaching": true,
+    "version": 1,
+    "kb": 253,
+    "about": "Make words on the board from your seven letter tiles. Premium squares score more. Most points wins.",
+    "how": [
+      "Tap a tile in your rack, then a square. Make a word in one line, joined to the tiles there.",
+      "The first word covers the star. Every word you make must be a real word; 2L, 3L, 2W, 3W score more.",
+      "Use all seven tiles for 50 more. Stuck? Swap tiles or pass.",
+      "It ends when someone uses their last tile and the bag is empty. Most points wins."
+    ]
+  },
+  {
+    "id": "word-guess",
+    "name": "Word Guess",
+    "type": "puzzles",
+    "tags": ["words"],
+    "players": [1, 1],
+    "cpu": false,
+    "ages": "7+",
+    "teaching": true,
+    "version": 1,
+    "kb": 58,
+    "about": "Find the hidden word of five letters. Today's word, or pick a topic: Places, Animals, Food and more.",
+    "how": [
+      "Type a word of five letters and tap Enter.",
+      "Green: right letter, right square. Yellow: in the word, another square. Grey: not in the word.",
+      "Keep guessing until you find it. Stuck? Hint shows one right letter."
+    ],
+    "pick": {
+      "label": "Words",
+      "daily": "today",
+      "options": [
+        ["today", "Today's word"],
+        ["mix", "A mix"],
+        ["places", "Places"],
+        ["animals", "Animals"],
+        ["food", "Food"],
+        ["nature", "Nature"],
+        ["home", "Home"],
+        ["sports", "Sports"]
       ]
     }
   }

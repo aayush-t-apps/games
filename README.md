@@ -1,10 +1,10 @@
 # Games
 
-Eight classic games for any device: Four in a Row, Wild Jacks (play a card, put a chip on its
+Nine classic games for any device: Four in a Row, Wild Jacks (play a card, put a chip on its
 square, make lines of five; 2 to 4 players, four in pairs), Ludo, Snakes and Ladders (roll two
-dice and pick your move; 2 to 4 players), Crazy Eights, Go Fish, Memory
-and Quiz Race. Play against the CPU (easy, normal or hard), or pass-and-play with family on one phone or
-tablet. Two puzzles to play alone: Sudoku (Easy to Expert) and Crossword (today's, or a topic). It works offline, installs like an app, and has a kid mode with hints and undo. Your own
+dice and pick your move; 2 to 4 players), Crazy Eights, Go Fish, Memory, Quiz Race and Word
+Tiles (make words on a board from seven letter tiles; 2 to 4 players). Play against the CPU (easy, normal or hard), or pass-and-play with family on one phone or
+tablet. Three puzzles to play alone: Sudoku (Easy to Expert), Crossword (today's, or a topic) and Word Guess (find a word of five letters: today's, or a topic such as Places or Animals). Filters on the games page show the games for how many play and what kind (kids, words, cards, board, puzzles). It works offline, installs like an app, and has a kid mode with hints and undo. Your own
 scores stay in your browser. Play with friends on their own devices in an online room: members
 start rooms, and anyone joins with the link, the code or the QR code, with no sign-in.
 

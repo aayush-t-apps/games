@@ -208,6 +208,29 @@ export function emblem(id) {
           .join(""),
       )
       .join("")}<text x="9" y="16" font-size="9" font-weight="800" fill="${c.ink}">A</text><text x="22" y="16" font-size="9" font-weight="800" fill="${c.ink}">B</text><text x="9" y="29" font-size="9" font-weight="800" fill="${c.red}">C</text>`,
+    // Two rows of guesses: green, yellow and grey squares, the last all green.
+    "word-guess": ["gy-g-", "ggggg"]
+      .flatMap((row, y) =>
+        [...row].map(
+          (m, x) =>
+            `<rect x="${5 + x * 11}" y="${16 + y * 16}" width="10" height="13" rx="2" fill="${m === "g" ? c.green : m === "y" ? c.yellow : "#77746c"}"/>`,
+        ),
+      )
+      .join(""),
+    // WORD across and ONE down, on letter tiles.
+    "word-tiles": [
+      ["W", 4, 14],
+      ["O", 18, 14],
+      ["R", 32, 14],
+      ["D", 46, 14],
+      ["N", 18, 29],
+      ["E", 18, 44],
+    ]
+      .map(
+        ([l, x, y]) =>
+          `<rect x="${x}" y="${y}" width="14" height="14" rx="2.5" fill="#f6d99a" stroke="#c9a25a"/><text x="${x + 7}" y="${y + 10.5}" font-size="10" font-weight="800" text-anchor="middle" fill="${c.ink}">${l}</text>`,
+      )
+      .join(""),
   }[id];
   return svg("0 0 64 64", art ?? "", "emblem");
 }

@@ -100,18 +100,26 @@ function search(cells) {
       score += delta;
     }
 
+  // At each depth, the column that last cut the search short goes first: alpha-beta then cuts
+  // sooner. The root's best column stays the same, so the CPU plays the same move, faster.
+  const killer = new Int8Array(DEPTH.best + 1).fill(-1);
   function negamax(p, depth, alpha, beta, filled, value) {
     if (filled === W * H) return 0;
     if (depth === 0) return p === 0 ? value : -value;
     let best = -Infinity;
-    for (const col of ORDER) {
-      if (heights[col] === H) continue;
+    const first = killer[depth];
+    for (let j = first < 0 ? 0 : -1; j < W; j++) {
+      const col = j < 0 ? first : ORDER[j];
+      if ((j >= 0 && col === first) || heights[col] === H) continue;
       place(col, p);
       const v = won ? WIN + depth : -negamax(1 - p, depth - 1, -beta, -alpha, filled + 1, value + delta);
       lift(col, p);
       if (v > best) best = v;
       if (best > alpha) alpha = best;
-      if (alpha >= beta) break;
+      if (alpha >= beta) {
+        killer[depth] = col;
+        break;
+      }
     }
     return best;
   }
