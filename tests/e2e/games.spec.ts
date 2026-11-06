@@ -12,6 +12,7 @@ const GAMES = [
   "Memory",
   "Quiz Race",
   "Crossword",
+  "Word Tiles",
 ];
 
 async function open(page: Page) {
@@ -29,7 +30,9 @@ const turn = (page: Page) => page.locator("#turn");
 const freeColumn = (page: Page) =>
   page.getByRole("button", { name: /^Column \d, \d free$/ }).first();
 
-test("the hub lists the ten games with their type, players and ages (AC1.1)", async ({ page }) => {
+test("the hub lists the eleven games with their type, players and ages (AC1.1)", async ({
+  page,
+}) => {
   await open(page);
   const boxes = page.locator(".shelf > li");
   await expect(boxes.locator("h2")).toHaveText(GAMES);
@@ -77,6 +80,47 @@ test("Snakes and Ladders: roll two dice, the picks' squares glow, a pick moves t
   await expect(page.locator("#live")).toHaveText(/^Player (moved|climbed|slid)/);
   await expect(page.locator(".sl-piece").first()).not.toHaveAttribute("aria-label", /at the start/);
   await expect(page.locator("#live")).toHaveText(/^CPU 1 /);
+  await expect(turn(page)).toHaveText("Your turn");
+});
+
+test("Word Tiles: tiles go on the board, the words and points show, Play sends them (change 0009)", async ({
+  page,
+}) => {
+  await open(page);
+  await setup(page, "Word Tiles");
+  await page.getByLabel(/^Kid mode/).check();
+  await page.getByRole("button", { name: "Start" }).click();
+  await expect(page.locator("#board .wt-cell")).toHaveCount(225);
+  await expect(turn(page)).toHaveText("Your turn");
+  // Kid mode: the centre star glows, the only square a first word can cover.
+  await expect(page.locator(".wt-cell.legal")).toHaveCount(1);
+  await expect(page.locator(".wt-rack button")).toHaveCount(7);
+  // A tile and a square off the centre: the reason shows, and Play waits.
+  const firstTile = page.locator(".wt-rack button").first();
+  await firstTile.click();
+  await expect(firstTile).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: /^row 1, column 2:/ }).click();
+  const letter = page.locator(".wt-letters button").first();
+  if (await letter.isVisible()) await letter.click();
+  await expect(page.locator(".wt-score")).toHaveText("The first word must cover the centre star.");
+  await expect(page.locator(".wt-rack button")).toHaveCount(6);
+  await expect(page.getByRole("button", { name: "Play", exact: true })).toBeDisabled();
+  await page.getByRole("button", { name: "Take back" }).click();
+  await expect(page.locator(".wt-rack button")).toHaveCount(7);
+  // The hint puts a word on the board (rarely, no word fits: it says swap, and we pass); Play
+  // sends it, and the CPU plays.
+  await page.getByRole("button", { name: "Hint" }).click();
+  await expect(page.locator("#msg")).toHaveText(/^(Try [A-Z]+ for \d+|Swap)/);
+  if ((await page.locator(".wt-tile.new").count()) === 0)
+    await page.getByRole("button", { name: "Pass" }).click();
+  else {
+    await expect(page.locator(".wt-score")).toHaveText(/^[A-Z]+(, [A-Z]+)*: \d+ points?$/);
+    await page.getByRole("button", { name: /^Play [A-Z]+$/ }).click();
+  }
+  await expect(page.locator("#live")).toHaveText(
+    /^Player (played [A-Z]+.* for \d+|swapped|passed)/,
+  );
+  await expect(page.locator("#live")).toHaveText(/^CPU 1 (played|swapped|passed)/);
   await expect(turn(page)).toHaveText("Your turn");
 });
 

@@ -36,14 +36,15 @@ color:#6b5a43;font-size:2.3cqi;font-weight:800;line-height:1;display:grid;place-
 .wt-tile.last{box-shadow:inset 0 0 0 2px var(--focus)}
 .wt-tile.put-in{animation:wt-put .25s ease-out}
 @keyframes wt-put{from{scale:1.5;opacity:0}}
-.wt-rack{display:flex;gap:.35rem;justify-content:center;flex-wrap:wrap}
-.wt-rack button{position:relative;width:clamp(44px,11cqi,58px);aspect-ratio:1;padding:0;border:0;border-radius:6px;
+.wt-rack{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,3.6rem);gap:.3rem;justify-content:center;width:min(100%,27rem)}
+.wt-rack button{position:relative;min-width:0;width:100%;aspect-ratio:1;padding:0;border:0;border-radius:6px;
 background:#f6d99a;color:#1b1b1b;box-shadow:inset 0 -3px 0 #c9a25a;font-size:clamp(1.3rem,6cqi,1.9rem);font-weight:800}
 .wt-rack .v{position:absolute;right:6%;bottom:4%;font-size:.45em}
 .wt-rack button.picked{transform:translateY(-12%);box-shadow:0 0 0 3px var(--glow),inset 0 -3px 0 #c9a25a}
 .wt-rack button.marked{background:#bcd3f2;box-shadow:inset 0 0 0 3px var(--blue)}
 .wt-score{margin:0;font-weight:700;text-align:center;min-height:1.4em}
 .wt-actions,.wt-letters{display:flex;flex-wrap:wrap;gap:.4rem;justify-content:center}
+.board .wt-actions button.primary{color:#fff}
 .wt-letters button{min-width:44px;font-weight:800}
 .wt-bag{margin:0;font-size:.9rem;opacity:.85}
 `;
@@ -76,9 +77,7 @@ const tileHtml = (ch) =>
   `<span class="l">${ch.toUpperCase()}</span>${ch === "?" ? "" : `<span class="v">${points(ch)}</span>`}`;
 
 export default {
-  status: (view, seat) => ({
-    text: `${view.scores[seat]} ${view.scores[seat] === 1 ? "point" : "points"} · ${view.racks[seat]} tiles`,
-  }),
+  status: (view, seat) => ({ text: `${view.scores[seat]} ${view.scores[seat] === 1 ? "point" : "points"}` }),
   hintText(move, view) {
     if (move.t === "swap") return "Swap your tiles: no word fits.";
     if (move.t === "pass") return "Pass: no word fits.";

@@ -5,6 +5,15 @@ Versions: [Semantic Versioning](https://semver.org/). Change docs: `docs/changes
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-06
+
+### Added
+
+- Word Tiles, a crossword game for 2 to 4 players: put letter tiles from your rack on a 15 × 15
+  board with premium squares, see the words and points as you go, swap or pass; a built-in list
+  of about 63,500 common words (American and British spellings). CPU on easy, normal and hard,
+  pass-and-play and online rooms (docs/changes/0009-word-tiles.md).
+
 ## [0.7.0] - 2026-10-31
 
 ### Added

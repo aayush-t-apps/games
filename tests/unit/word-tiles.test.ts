@@ -35,7 +35,10 @@ type Tiles = [number, string][];
 /** A board with words on it: [first square, step (1 across, N down), letters]. */
 function boardWith(...words: [number, number, string][]) {
   const b = Array(N * N).fill(".");
-  for (const [at, step, w] of words) [...w].forEach((ch, k) => (b[at + k * step] = ch));
+  for (const [at, step, w] of words)
+    [...w].forEach((ch, k) => {
+      b[at + k * step] = ch;
+    });
   return b.join("");
 }
 const EMPTY = boardWith();
@@ -82,13 +85,30 @@ describe("Word Tiles", () => {
 
   it("scores a word's letters, with the premiums under the new tiles only (AC14.2)", () => {
     // The centre is a 2W: (3 + 1 + 1) × 2.
-    expect(judge(EMPTY, [[CENTRE - 1, "C"], [CENTRE, "A"], [CENTRE + 1, "T"]])).toEqual({ words: ["CAT"], score: 10 });
+    expect(
+      judge(EMPTY, [
+        [CENTRE - 1, "C"],
+        [CENTRE, "A"],
+        [CENTRE + 1, "T"],
+      ]),
+    ).toEqual({ words: ["CAT"], score: 10 });
     // The centre's 2W is used: CATS is 6.
     expect(judge(CAT, [[CENTRE + 2, "S"]])).toEqual({ words: ["CATS"], score: 6 });
     // TO under AT makes three words: TO (O on a 2L), AT and TO down.
-    expect(judge(CAT, [[CENTRE + N, "T"], [CENTRE + N + 1, "O"]])).toEqual({ words: ["TO", "AT", "TO"], score: 8 });
+    expect(
+      judge(CAT, [
+        [CENTRE + N, "T"],
+        [CENTRE + N + 1, "O"],
+      ]),
+    ).toEqual({ words: ["TO", "AT", "TO"], score: 8 });
     // A blank is worth 0.
-    expect(judge(EMPTY, [[CENTRE - 1, "C"], [CENTRE, "a"], [CENTRE + 1, "T"]])).toEqual({ words: ["CAT"], score: 8 });
+    expect(
+      judge(EMPTY, [
+        [CENTRE - 1, "C"],
+        [CENTRE, "a"],
+        [CENTRE + 1, "T"],
+      ]),
+    ).toEqual({ words: ["CAT"], score: 8 });
   });
 
   it("adds 50 for all seven tiles at once (AC14.2)", () => {
@@ -99,26 +119,80 @@ describe("Word Tiles", () => {
   it("refuses a play that breaks a rule, and says why (AC14.1)", () => {
     const cases: [string, Tiles, string][] = [
       [EMPTY, [], "Put tiles on the board first."],
-      [EMPTY, [[0, "A"], [1, "T"]], "The first word must cover the centre star."],
+      [
+        EMPTY,
+        [
+          [0, "A"],
+          [1, "T"],
+        ],
+        "The first word must cover the centre star.",
+      ],
       [EMPTY, [[CENTRE, "A"]], "A word needs two letters or more."],
-      [EMPTY, [[CENTRE, "A"], [CENTRE + N + 1, "T"]], "Put your tiles in one line, across or down."],
-      [EMPTY, [[CENTRE, "A"], [CENTRE + 2, "T"]], "Leave no gaps between your tiles."],
+      [
+        EMPTY,
+        [
+          [CENTRE, "A"],
+          [CENTRE + N + 1, "T"],
+        ],
+        "Put your tiles in one line, across or down.",
+      ],
+      [
+        EMPTY,
+        [
+          [CENTRE, "A"],
+          [CENTRE + 2, "T"],
+        ],
+        "Leave no gaps between your tiles.",
+      ],
       [CAT, [[CENTRE, "O"]], "Put each tile on an empty square."],
-      [CAT, [[0, "A"], [1, "T"]], "Join your word to the tiles on the board."],
-      [EMPTY, [[CENTRE, "X"], [CENTRE + 1, "Q"]], "XQ isn't in the word list."],
+      [
+        CAT,
+        [
+          [0, "A"],
+          [1, "T"],
+        ],
+        "Join your word to the tiles on the board.",
+      ],
+      [
+        EMPTY,
+        [
+          [CENTRE, "X"],
+          [CENTRE + 1, "Q"],
+        ],
+        "XQ isn't in the word list.",
+      ],
     ];
     for (const [board, tiles, why] of cases) expect(judge(board, tiles).error).toBe(why);
   });
 
   it("knows common words in American and British spelling, and the short ones", () => {
-    for (const w of ["cat", "colour", "color", "something", "replaying", "fjord", "aa", "qi", "za", "xu"])
+    for (const w of [
+      "cat",
+      "colour",
+      "color",
+      "something",
+      "replaying",
+      "fjord",
+      "aa",
+      "qi",
+      "za",
+      "xu",
+    ])
       expect(isWord(w), w).toBe(true);
     for (const w of ["zzzz", "xq", "catt", "a"]) expect(isWord(w), w).toBe(false);
   });
 
   it("plays tiles from the rack, scores them and draws back to seven (AC14.1)", () => {
     const s = position("?ACQSTZ");
-    const next = rules.apply(s, 0, playOf([[CENTRE - 1, "C"], [CENTRE, "a"], [CENTRE + 1, "T"]]));
+    const next = rules.apply(
+      s,
+      0,
+      playOf([
+        [CENTRE - 1, "C"],
+        [CENTRE, "a"],
+        [CENTRE + 1, "T"],
+      ]),
+    );
     expect(next.board.slice(CENTRE - 1, CENTRE + 2)).toBe("CaT");
     expect(next.scores[0]).toBe(8);
     expect(next.racks[0]).toHaveLength(7);
@@ -126,17 +200,42 @@ describe("Word Tiles", () => {
     expect(next.note).toBe("@0 played CAT for 8");
     expect(next.turn).toBe(1);
     // Only tiles on the rack, and a blank only from a "?".
-    expect(reason(() => rules.apply(s, 0, playOf([[CENTRE, "B"], [CENTRE + 1, "E"]])))).toBe("Play only tiles from your rack.");
-    expect(reason(() => rules.apply(position("ACQSTZE"), 0, playOf([[CENTRE, "a"], [CENTRE + 1, "T"]])))).toBe(
-      "Play only tiles from your rack.",
+    expect(
+      reason(() =>
+        rules.apply(
+          s,
+          0,
+          playOf([
+            [CENTRE, "B"],
+            [CENTRE + 1, "E"],
+          ]),
+        ),
+      ),
+    ).toBe("Play only tiles from your rack.");
+    expect(
+      reason(() =>
+        rules.apply(
+          position("ACQSTZE"),
+          0,
+          playOf([
+            [CENTRE, "a"],
+            [CENTRE + 1, "T"],
+          ]),
+        ),
+      ),
+    ).toBe("Play only tiles from your rack.");
+    expect(reason(() => rules.apply(s, 0, { t: "play", tiles: "999A" }))).toBe(
+      "Play a word, swap tiles or pass.",
     );
-    expect(reason(() => rules.apply(s, 0, { t: "play", tiles: "999A" }))).toBe("Play a word, swap tiles or pass.");
     expect(reason(() => rules.apply(s, 1, { t: "pass" }))).toBe("It isn't your turn.");
   });
 
   it("takes any play that follows the rules, not only those the CPU lists", () => {
     const s = position("ACEINST");
-    const move = playOf([[CENTRE, "A"], [CENTRE + 1, "T"]]);
+    const move = playOf([
+      [CENTRE, "A"],
+      [CENTRE + 1, "T"],
+    ]);
     expect(rules.legalMoves(s, 0)).not.toContainEqual(move);
     expect(rules.apply(s, 0, move).scores[0]).toBe(4);
   });
@@ -148,8 +247,12 @@ describe("Word Tiles", () => {
     for (const ch of "AERST") expect(next.racks[0]).toContain(ch);
     expect(next.bag).toHaveLength(s.bag.length);
     expect(next.note).toBe("@0 swapped 2 tiles");
-    expect(reason(() => rules.apply(s, 0, { t: "swap", tiles: "B" }))).toBe("Swap tiles from your rack.");
-    expect(reason(() => rules.apply(s, 0, { t: "swap", tiles: "" }))).toBe("Pick the tiles to swap.");
+    expect(reason(() => rules.apply(s, 0, { t: "swap", tiles: "B" }))).toBe(
+      "Swap tiles from your rack.",
+    );
+    expect(reason(() => rules.apply(s, 0, { t: "swap", tiles: "" }))).toBe(
+      "Pick the tiles to swap.",
+    );
     const low = { ...s, bag: "ABC" };
     expect(rules.legalMoves(low, 0)).not.toContainEqual(expect.objectContaining({ t: "swap" }));
     expect(reason(() => rules.apply(low, 0, { t: "swap", tiles: "Q" }))).toBe(
@@ -161,7 +264,14 @@ describe("Word Tiles", () => {
     const s = position("AT");
     s.bag = "";
     s.racks[1] = "QZ";
-    const end = rules.apply(s, 0, playOf([[CENTRE, "A"], [CENTRE + 1, "T"]]));
+    const end = rules.apply(
+      s,
+      0,
+      playOf([
+        [CENTRE, "A"],
+        [CENTRE + 1, "T"],
+      ]),
+    );
     expect(end.over).toBe(true);
     expect(end.scores).toEqual([4 + 20, -20]);
     expect(end.note).toBe("@0 played AT for 4, and went out");
@@ -186,11 +296,12 @@ describe("Word Tiles", () => {
     let s = rules.init(3, 7);
     for (let n = 0; n < 12 && !rules.winner(s); n++) {
       const { plays, best } = findPlays(s.board, s.racks[s.turn]);
-      for (const p of [...plays, ...(best ? [best] : [])]) expect(judge(s.board, p.tiles).score).toBe(p.score);
+      for (const p of [...plays, ...(best ? [best] : [])])
+        expect(judge(s.board, p.tiles)).toEqual({ words: expect.any(Array), score: p.score });
       s = rules.apply(s, s.turn, rules.ai(s, s.turn, "hard"));
     }
     // The best opening for these letters is a seven-letter word over a 2L: 66.
-    expect(findPlays(EMPTY, "AEINRST").plays[0].score).toBe(66);
+    expect(findPlays(EMPTY, "AEINRST").plays[0]?.score).toBe(66);
   });
 
   it("lists a spread of plays, a swap and a pass; the CPU picks among them by level", () => {
@@ -199,7 +310,8 @@ describe("Word Tiles", () => {
     expect(legal.length).toBeLessThanOrEqual(15);
     expect(legal.slice(-2)).toEqual([{ t: "swap", tiles: "AEINRST" }, { t: "pass" }]);
     expect(rules.ai(s, 0, "normal")).toEqual(legal[0]);
-    for (const level of ["easy", "normal", "hard", "best"]) expect(legal).toContainEqual(rules.ai(s, 0, level));
+    for (const level of ["easy", "normal", "hard", "best"])
+      expect(legal).toContainEqual(rules.ai(s, 0, level));
     // No word fits: swap, or pass when the bag is low.
     const stuck = position("QQQQQQQ", CAT);
     expect(rules.ai(stuck, 0, "hard")).toEqual({ t: "swap", tiles: "QQQQQQQ" });
@@ -209,8 +321,9 @@ describe("Word Tiles", () => {
   it("plays better by level: normal beats easy, hard beats normal more often than not", () => {
     const match = (levels: string[], seed: number) => {
       let s = rules.init(2, seed);
-      while (!rules.winner(s)) s = rules.apply(s, s.turn, rules.ai(s, s.turn, levels[s.turn] as string));
-      return s.scores;
+      while (!rules.winner(s))
+        s = rules.apply(s, s.turn, rules.ai(s, s.turn, levels[s.turn] as string));
+      return s.scores as [number, number];
     };
     let normal = 0;
     let hard = 0;
