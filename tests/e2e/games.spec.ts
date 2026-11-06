@@ -27,6 +27,13 @@ async function setup(page: Page, game: string) {
   await expect(page.getByRole("heading", { level: 1, name: game })).toBeVisible();
 }
 
+// Start loads the game's files the first time ("Getting …"): on a busy box that can take longer
+// than an expect's 5 s, so wait for it to end before the game's own checks.
+async function start(page: Page) {
+  await page.getByRole("button", { name: "Start" }).click();
+  await expect(page.locator("p.loading")).toHaveCount(0, { timeout: 15_000 });
+}
+
 const turn = (page: Page) => page.locator("#turn");
 const freeColumn = (page: Page) =>
   page.getByRole("button", { name: /^Column \d, \d free$/ }).first();
@@ -49,7 +56,7 @@ test("Wild Jacks: a picked card's squares glow, a tap puts a chip there, and the
 }) => {
   await open(page);
   await setup(page, "Wild Jacks");
-  await page.getByRole("button", { name: "Start" }).click();
+  await start(page);
   await expect(page.locator("#board .cl-cell")).toHaveCount(100);
   await expect(turn(page)).toHaveText("Your turn");
   // A card that isn't a jack: its open squares glow, and a tap on one plays it.
@@ -73,7 +80,7 @@ test("Snakes and Ladders: roll two dice, the picks' squares glow, a pick moves t
 }) => {
   await open(page);
   await setup(page, "Snakes and Ladders");
-  await page.getByRole("button", { name: "Start" }).click();
+  await start(page);
   await expect(turn(page)).toHaveText("Your turn");
   await page.getByRole("button", { name: "Roll the dice" }).click();
   // From the start every pick fits: one die, the other, or both added (one or two picks).
@@ -96,7 +103,7 @@ test("Word Tiles: tiles go on the board, the words and points show, Play sends t
   await open(page);
   await setup(page, "Word Tiles");
   await page.getByLabel(/^Kid mode/).check();
-  await page.getByRole("button", { name: "Start" }).click();
+  await start(page);
   await expect(page.locator("#board .wt-cell")).toHaveCount(225);
   await expect(turn(page)).toHaveText("Your turn");
   // Kid mode: the centre star glows, the only square a first word can cover.
@@ -138,7 +145,7 @@ test("Word Guess: pick a topic, type a word, see its colours, and Hint shows a l
   await setup(page, "Word Guess");
   await expect(page.getByRole("radio", { name: "Today's word" })).toBeChecked();
   await page.getByRole("radio", { name: "Places" }).check();
-  await page.getByRole("button", { name: "Start" }).click();
+  await start(page);
   await expect(page.locator(".wg-topic")).toHaveText("Places: a word of five letters");
   await expect(page.locator(".wg-row")).toHaveCount(6);
   // Too short: it says so. Then the screen's keys and the device's keyboard both type.
@@ -193,7 +200,7 @@ test("Back goes one screen back, asks before it leaves a match, and stays in the
 }) => {
   await open(page);
   await setup(page, "Four in a Row");
-  await page.getByRole("button", { name: "Start" }).click();
+  await start(page);
   await expect(turn(page)).toHaveText("Your turn");
   // No: the match stays.
   page.once("dialog", (d) => d.dismiss());
@@ -220,7 +227,7 @@ test("Sudoku: pick a difficulty, place a number, and Hint shows a right step (ch
   await expect(page.getByRole("radio")).toHaveCount(4);
   await page.getByRole("radio", { name: "Expert" }).check();
   await expect(page.getByLabel(/^Kid mode/)).toHaveCount(0);
-  await page.getByRole("button", { name: "Start" }).click();
+  await start(page);
   await expect(page.locator("#board [data-x]")).toHaveCount(81);
   await page.getByRole("button", { name: "Hint" }).click();
   await expect(page.locator("#msg")).toHaveText(/^Try a \d in row \d, column \d\.$/);
@@ -233,7 +240,7 @@ test("Crossword: today's puzzle shows its clue, and Hint gives a letter (change 
   await open(page);
   await setup(page, "Crossword");
   await expect(page.getByRole("radio", { name: "Today's puzzle" })).toBeChecked();
-  await page.getByRole("button", { name: "Start" }).click();
+  await start(page);
   await expect(page.locator("#board [data-x]").first()).toBeVisible();
   await page.getByRole("button", { name: "Hint" }).click();
   await expect(page.locator("#msg")).toHaveText(/Across|Down/);
@@ -249,7 +256,7 @@ test("Four in a Row plays to the end against the CPU and counts the score (AC1.2
   const how = page.locator("details.how");
   await expect(how).toHaveAttribute("open");
   await expect(how.locator("li").first()).toHaveText("Tap a column to drop your disc into it.");
-  await page.getByRole("button", { name: "Start" }).click();
+  await start(page);
   // A banner says whose turn it is, and a CPU shows that it is thinking (AC1.6, AC1.7).
   await expect(page.locator(".banner")).toHaveText("Your turn");
   await freeColumn(page).click();
@@ -278,7 +285,7 @@ test("Go Fish pass-and-play covers the screen between players (AC2.1, AC2.2)", a
   await page.getByLabel("You", { exact: true }).fill("Ana");
   await page.getByRole("button", { name: "Person here" }).click();
   await page.getByLabel("Player 2").fill("Sam");
-  await page.getByRole("button", { name: "Start" }).click();
+  await start(page);
 
   await expect(page.getByRole("dialog", { name: "Pass to Ana" })).toBeVisible();
   await expect(page.locator(".card-btn")).toHaveCount(0);
@@ -301,7 +308,7 @@ test("a match plays by keyboard alone, and says each move (AC2.3)", async ({ pag
   test.skip(info.project.name !== "desktop", "keyboard play is checked on desktop");
   await open(page);
   await setup(page, "Four in a Row");
-  await page.getByRole("button", { name: "Start" }).click();
+  await start(page);
   await expect(turn(page)).toHaveText("Your turn");
   for (let i = 0; i < 10; i++) {
     const key = await page.evaluate(() => (document.activeElement as HTMLElement).dataset.key);
@@ -342,7 +349,7 @@ test("plays offline after Download all (AC3.1, AC3.2)", async ({ page, context }
   await expect(plays).toHaveCount(GAMES.length);
   for (const play of await plays.all()) await expect(play).toBeEnabled();
   await setup(page, "Memory");
-  await page.getByRole("button", { name: "Start" }).click();
+  await start(page);
   await page.getByRole("button", { name: "Card 1, face down" }).click();
   await expect(page.getByRole("button", { name: /^Card 1, (?!face down)/ })).toBeVisible();
   await context.setOffline(false);
@@ -354,7 +361,7 @@ test("kid mode highlights moves, gives a hint and takes a move back (AC4.1)", as
   await page.getByLabel(/^Kid mode/).check();
   await expect(page.getByRole("radio")).toHaveCount(1);
   await expect(page.getByRole("radio", { name: "Easy" })).toBeChecked();
-  await page.getByRole("button", { name: "Start" }).click();
+  await start(page);
   await expect(turn(page)).toHaveText("Your turn");
   await expect(page.locator(".col.legal")).toHaveCount(7);
 
@@ -390,7 +397,7 @@ test("the name typed on Setup is kept for next time", async ({ page }) => {
   await open(page);
   await setup(page, "Memory");
   await page.getByLabel("You", { exact: true }).fill("Sam");
-  await page.getByRole("button", { name: "Start" }).click();
+  await start(page);
   await expect(page.locator("#board")).toBeVisible();
   // A reload isn't kept as a match: it opens that game's Setup (AC10.1).
   await page.reload();
@@ -431,7 +438,7 @@ test("a resize changes the layout and keeps the match going (AC3.5)", async ({ p
   await open(page);
   await expect(page.locator("body")).toHaveAttribute("data-layout", "compact");
   await setup(page, "Four in a Row");
-  await page.getByRole("button", { name: "Start" }).click();
+  await start(page);
   await page.getByRole("button", { name: "Column 1, 6 free" }).click();
   await expect(turn(page)).toHaveText("Your turn");
   await page.setViewportSize({ width: 1024, height: 700 });
